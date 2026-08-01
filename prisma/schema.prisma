@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum Plan {
+  STARTER
+  GROWTH
+  PRO
+}
+
+enum ContactStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+}
+
+
+enum TaskSource {
+  WEB
+  BOT
+}
+
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ActivityType {
+  NOTE
+  TASK_COMPLETED
+  DEAL_MOVED
+  BOT_MESSAGE
+  STOCK_MOVEMENT
+}
+
+enum NotificationType {
+  INFO
+  TASK
+  DEAL
+  BOT
+  SYSTEM
+}
+
+enum BotPlatform {
+  TELEGRAM
+  WHATSAPP
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String?
+  name           String?
+  image          String?
+  role           Role     @default(MEMBER)
+  workspaceId    String
+  telegramChatId String?  @unique
+  whatsappNumber String?  @unique
+  createdAt      DateTime @default(now())
+
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignedContacts Contact[] @relation("ContactAssignee")
+  assignedDeals  Deal[]     @relation("DealAssignee")
+  assignedTasks  Task[]     @relation("TaskAssignee")
+  createdTasks   Task[]     @relation("TaskCreator")
+  activities     Activity[]
+  botSessions    BotSession[]
+  notifications  Notification[]
+  stockMovements StockMovement[]
+
+  @@index([workspaceId])
+}
+
+model Workspace {
+  id                   String    @id @default(cuid())
+  name                 String
+  slug                 String    @unique
+  plan                 Plan      @default(STARTER)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  subscriptionActive   Boolean   @default(false)
+  timezone             String    @default("UTC")
+  trialEndsAt          DateTime?
+  createdAt            DateTime  @default(now())
+
+  users            User[]
+  contacts         Contact[]
+  deals            Deal[]
+  tasks            Task[]
+  activities       Activity[]
+  notifications    Notification[]
+  pipelineColumns  PipelineColumn[]
+  taskColumns      TaskColumn[]
+  products         Product[]
+  stockMovements   StockMovement[]
+}
+
+model Product {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  name              String
+  sku               String?
+  unitPrice         Decimal  @default(0) @db.Decimal(12, 2)
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(0)
+  notes             String?
+  deleted           Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+
+  @@unique([workspaceId, sku])
+  @@index([workspaceId])
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  workspaceId String
+  productId   String
+  delta       Int
+  reason      String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([productId])
+}
+
+model Contact {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  firstName    String
+  lastName     String?
+  email        String?
+  phone        String?
+  company      String?
+  notes        String?
+  status       ContactStatus @default(LEAD)
+  assignedToId String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignedTo User?      @relation("ContactAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  activities Activity[]
+  deals      Deal[]
+  tasks      Task[]
+
+  @@index([workspaceId])
+}
+
+model Deal {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  contactId    String?
+  title        String
+  value        Decimal   @default(0) @db.Decimal(12, 2)
+  stage        String    @default("LEAD")
+  assignedToId String?
+  lastMovedAt  DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  assignedTo User?     @relation("DealAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  tasks      Task[]
+
+  @@index([workspaceId])
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  title        String
+  description  String?
+  dueDate      DateTime?
+  status       String       @default("TODO")
+  priority     TaskPriority @default(MEDIUM)
+  completed    Boolean    @default(false)
+  completedAt  DateTime?
+  deleted      Boolean    @default(false)
+  assignedToId String?
+  contactId    String?
+  dealId       String?
+  createdById  String?
+  source       TaskSource @default(WEB)
+  createdAt    DateTime   @default(now())
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignedTo User?     @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy  User?     @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  contactId   String?
+  workspaceId String
+  type        ActivityType
+  content     String
+  createdById String?
+  createdAt   DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  workspaceId String
+  title       String
+  body        String?
+  type        NotificationType @default(INFO)
+  read        Boolean          @default(false)
+  link        String?
+  createdAt   DateTime         @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model PipelineColumn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  key         String
+  label       String
+  color       String    @default("#64748B")
+  order       Int
+  isSystem    Boolean   @default(false)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+}
+
+model TaskColumn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  key         String
+  label       String
+  color       String    @default("#64748B")
+  order       Int
+  isSystem    Boolean   @default(false)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+}
+
+model BotSession {
+  id           String      @id @default(cuid())
+  userId       String
+  platform     BotPlatform
+  chatId       String
+  lastActivity DateTime    @default(now())
+  context      Json?
+  createdAt    DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+  @@index([userId])
+}

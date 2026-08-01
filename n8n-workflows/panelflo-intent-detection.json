@@ -1,0 +1,189 @@
+{
+  "name": "panelflo-intent-detection",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bot-message",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-bot-message",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "bot-message"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/user-context?userId={{ $json.body.userId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-user-context",
+      "name": "Fetch User Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Webhook').first().json.body;\nconst raw = $input.first().json.output;\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nconst parsed = JSON.parse(cleaned);\nreturn [{\n  json: {\n    userId: webhook.userId,\n    platform: webhook.platform,\n    action: parsed.intent,\n    data: { ...parsed.entities, originalMessage: webhook.message },\n    reply: parsed.reply,\n    requiresConfirm: Boolean(parsed.requiresConfirm)\n  }\n}];"
+      },
+      "id": "code-parse",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PANELFLO_API_URL }}/api/webhooks/bot-action",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "http-bot-action",
+      "name": "Post Bot Action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Current datetime: ' + new Date().toISOString() + '\\nMessage: ' + $('Webhook').item.json.body.message + '\\n\\nRecent contacts: ' + JSON.stringify($json.data.recentContacts) + '\\nOpen tasks: ' + JSON.stringify($json.data.openTasks) + '\\nOpen deals: ' + JSON.stringify($json.data.openDeals) }}",
+        "options": {
+          "systemMessage": "You are Flo, the Panelflo business assistant. Classify the user message into exactly one intent and extract entities. Intents and their entities:\nADD_CONTACT {name, email?, phone?, company?}\nUPDATE_CONTACT {name, status?(LEAD|ACTIVE|INACTIVE), email?, phone?, company?}\nDELETE_CONTACT {name} - destructive\nLIST_CONTACTS {status?(LEAD|ACTIVE|INACTIVE), search?}\nLOOKUP_CONTACT {name} - show one contact's details\nAI_SUMMARY {name} - summarize a contact's history\nCREATE_TASK {title, dueDate?(ISO 8601), contactName?, assigneeName?}\nCOMPLETE_TASK {title}\nDELETE_TASK {title} - destructive\nASSIGN_TASK {title, assigneeName}\nLIST_TASKS {filter: active|today|overdue|completed|my} - any request to see/show/list tasks\nCREATE_DEAL {title, value?(number), contactName?, stage?}\nMOVE_DEAL {title, stage(LEAD|CONTACTED|PROPOSAL|WON|LOST)} - includes 'we won/lost X'\nUPDATE_DEAL {title, value(number)}\nLIST_DEALS {stage?} - show pipeline/deals\nADD_NOTE {note, contactName?}\nDAILY_BRIEF {} - what's my day/agenda\nWEEKLY_STATS {} - how did we do this week/report\nHELP {} - what can you do\nGREETING {}\nUNKNOWN {}\n\nRules: resolve relative dates (tomorrow, next Monday, in 2 hours) to ISO 8601 using the current datetime provided. requiresConfirm is true ONLY for DELETE_CONTACT and DELETE_TASK; phrase reply as a yes/no question then. reply is a short friendly sentence in the user's language. Respond with raw JSON only - no markdown fences, no prose: { \"intent\": ..., \"entities\": {...}, \"reply\": ..., \"requiresConfirm\": boolean }"
+        }
+      },
+      "id": "ai-agent-intent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "gemini-chat-model-intent",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        440,
+        200
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qLxIjmx61WLYAqJe",
+          "name": "Gemini (Panelflo Agent)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch User Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch User Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "Post Bot Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

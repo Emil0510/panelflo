@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/*
+ * ─── Design Tokens ──────────────────────────────────────────────────────────
+ *
+ * SINGLE SOURCE OF TRUTH for all colors.
+ * Edit here → changes propagate to every component automatically.
+ *
+ * Brand palette: #9CB080 · #618764 · #2B5748 · #273338
+ * Typography: Plus Jakarta Sans (B2B SaaS, enterprise)
+ * Style: Soft UI Evolution — subtle depth, WCAG AA+, modern
+ * ──────────────────────────────────────────────────────────────────────────
+ */
+@layer base {
+  :root {
+    /* Brand */
+    --brand:            #2B5748;
+    --brand-foreground: #FFFFFF;
+    --brand-light:      #EBF2E8;
+    --brand-dark:       #273338;
+    --brand-hover:      #224540;
+    --brand-muted:      rgba(43, 87, 72, 0.10);
+
+    /* Surfaces */
+    --background:       #F4F7F5;
+    --foreground:       #0F172A;
+    --card:             #FFFFFF;
+    --card-foreground:  #0F172A;
+    --popover:          #FFFFFF;
+    --popover-foreground: #0F172A;
+
+    /* Sidebar */
+    --sidebar:          #FFFFFF;
+    --sidebar-foreground: #0F172A;
+    --sidebar-border:   #E8EDE9;
+
+    /* UI */
+    --primary:          var(--brand);
+    --primary-foreground: var(--brand-foreground);
+    --primary-light:    var(--brand-light);
+    --primary-dark:     var(--brand-dark);
+
+    --secondary:        #F0F4F1;
+    --secondary-foreground: #0F172A;
+
+    --muted:            #F0F4F1;
+    --muted-foreground: #64748B;
+
+    --accent:           var(--brand-light);
+    --accent-foreground: var(--brand-dark);
+
+    --destructive:      #EF4444;
+    --destructive-foreground: #FFFFFF;
+
+    --border:           #E2E8E4;
+    --input:            #E2E8E4;
+    --ring:             var(--brand);
+
+    /* Radius — softer, more polished */
+    --radius:           0.625rem;
+
+    /* Shadows — Soft UI Evolution */
+    --shadow-xs:  0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow-sm:  0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+    --shadow-md:  0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+    --shadow-lg:  0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+
+    /* Transitions */
+    --transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base:   200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow:   300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Status colors — task/deal badges */
+    --status-todo:      #F1F5F9;
+    --status-todo-fg:   #64748B;
+    --status-progress:  #DBEAFE;
+    --status-progress-fg: #1D4ED8;
+    --status-review:    #EDE9FE;
+    --status-review-fg: #6D28D9;
+    --status-done:      #DCFCE7;
+    --status-done-fg:   #15803D;
+
+    /* Priority colors */
+    --priority-low:     #F1F5F9;
+    --priority-low-fg:  #64748B;
+    --priority-medium:  #FEF9C3;
+    --priority-medium-fg: #854D0E;
+    --priority-high:    #FFEDD5;
+    --priority-high-fg: #C2410C;
+    --priority-urgent:  #FEE2E2;
+    --priority-urgent-fg: #B91C1C;
+  }
+
+  .dark {
+    /* Brand — lightest palette shade for contrast on dark */
+    --brand:            #9CB080;
+    --brand-foreground: #273338;
+    --brand-light:      rgba(156, 176, 128, 0.15);
+    --brand-dark:       #c5d4bb;
+    --brand-hover:      #8aaa6e;
+    --brand-muted:      rgba(156, 176, 128, 0.10);
+
+    /* Surfaces */
+    --background:       #0D1117;
+    --foreground:       #F1F5F9;
+    --card:             #161B22;
+    --card-foreground:  #F1F5F9;
+    --popover:          #1C2128;
+    --popover-foreground: #F1F5F9;
+
+    /* Sidebar */
+    --sidebar:          #0D1117;
+    --sidebar-foreground: #F1F5F9;
+    --sidebar-border:   rgba(255, 255, 255, 0.07);
+
+    /* UI */
+    --primary:          var(--brand);
+    --primary-foreground: var(--brand-foreground);
+    --primary-light:    var(--brand-light);
+    --primary-dark:     var(--brand-dark);
+
+    --secondary:        #1C2128;
+    --secondary-foreground: #F1F5F9;
+
+    --muted:            #1C2128;
+    --muted-foreground: #8892A4;
+
+    --accent:           var(--brand-light);
+    --accent-foreground: var(--brand-dark);
+
+    --destructive:      #EF4444;
+    --destructive-foreground: #FFFFFF;
+
+    --border:           rgba(255, 255, 255, 0.07);
+    --input:            rgba(255, 255, 255, 0.09);
+    --ring:             var(--brand);
+
+    /* Shadows — dark mode */
+    --shadow-xs:  0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-sm:  0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+    --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    --shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+
+    /* Status colors — dark mode */
+    --status-todo:      #1C2128;
+    --status-todo-fg:   #8892A4;
+    --status-progress:  #1e3a5f;
+    --status-progress-fg: #93C5FD;
+    --status-review:    #2d1f4e;
+    --status-review-fg: #C4B5FD;
+    --status-done:      #1a2e28;
+    --status-done-fg:   #9CB080;
+
+    /* Priority colors — dark mode */
+    --priority-low:     #1C2128;
+    --priority-low-fg:  #8892A4;
+    --priority-medium:  #3a2e00;
+    --priority-medium-fg: #FDE68A;
+    --priority-high:    #3a1f00;
+    --priority-high-fg: #FDBA74;
+    --priority-urgent:  #3a0f0f;
+    --priority-urgent-fg: #FCA5A5;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better focus rings */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Card shadow utility */
+  .card-shadow {
+    box-shadow: var(--shadow-sm);
+  }
+  .card-shadow-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Tabular numbers for data columns */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

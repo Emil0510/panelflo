@@ -1,0 +1,1431 @@
+{
+  "name": "panelflo-assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bot-message",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-bot-message",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "bot-message"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Current datetime: ' + new Date().toISOString() + '\\nuserId: ' + $json.body.userId + '\\nUser message: ' + $json.body.message }}",
+        "options": {
+          "systemMessage": "You are Flo, the Panelflo business assistant for Telegram/WhatsApp. You manage the user's CRM: contacts, tasks, deals, notes, and reports.\n\nYou have ONE tool: panelflo_action. Call it for ANY request that reads or changes data. Pass an action plus a data object with the entities. Available actions and their data fields:\nADD_CONTACT {name, email?, phone?, company?}\nUPDATE_CONTACT {name, status?(LEAD|ACTIVE|INACTIVE), email?, phone?, company?}\nDELETE_CONTACT {name}\nLIST_CONTACTS {status?, search?}\nLOOKUP_CONTACT {name}\nAI_SUMMARY {name}\nCREATE_TASK {title, dueDate?(ISO 8601), contactName?, assigneeName?}\nCOMPLETE_TASK {title}\nDELETE_TASK {title}\nASSIGN_TASK {title, assigneeName}\nLIST_TASKS {filter: active|today|overdue|completed|my}\nCREATE_DEAL {title, value?(number), contactName?, stage?}\nMOVE_DEAL {title, stage(LEAD|CONTACTED|PROPOSAL|WON|LOST)}\nUPDATE_DEAL {title, value(number)}\nLIST_DEALS {stage?}\nADD_NOTE {note, contactName?}\nDAILY_BRIEF {}\nWEEKLY_STATS {}\nADD_STOCK {name, sku?, price?(number), quantity?(number), threshold?(number)}\nADJUST_STOCK {name, delta(number, negative = stock out)}\nCHECK_STOCK {name}\nLIST_STOCK {lowOnly?(boolean)}\nHELP {}\n\nRules:\n- Resolve relative dates (tomorrow 3pm, next Monday) to ISO 8601 using the current datetime in the message.\n- DELETE_CONTACT and DELETE_TASK are destructive: first ask the user to confirm, and only call the tool after they explicitly say yes (you have conversation memory).\n- The tool returns the real result - relay it faithfully, never invent data.\n- Reply in the user's language, short and friendly, plain text only (no markdown).\n- Only greetings/small talk may be answered without the tool.\n- ALWAYS include the userId given in the message as the top-level \"userId\" field of every panelflo_action requestBody."
+        }
+      },
+      "id": "flo-agent",
+      "name": "Flo Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "gemini-chat-model",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        180,
+        220
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qLxIjmx61WLYAqJe",
+          "name": "Gemini (Panelflo Agent)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.chatId }}",
+        "contextWindowLength": 10
+      },
+      "id": "flo-memory",
+      "name": "Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        340,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Executes one Panelflo CRM action and returns the result. Use for everything: listing/creating/updating/completing/deleting tasks, contacts and deals, adding notes, daily brief, weekly stats, contact lookups and AI summaries. Set 'action' to one of the documented action names and 'data' to a JSON object with that action's fields (use {} when none).",
+        "method": "POST",
+        "url": "PANELFLO_API_URL_SUB/api/n8n/agent-tool?key=PANELFLO_API_KEY_SUB",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{requestBody}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "requestBody",
+              "description": "The full JSON request body: {\"userId\": \"<userId from the message>\", \"action\": \"<ACTION_NAME>\", \"data\": {<entity fields>}}. Example: {\"userId\": \"abc123\", \"action\": \"LIST_TASKS\", \"data\": {\"filter\": \"active\"}}",
+              "type": "json"
+            }
+          ]
+        }
+      },
+      "id": "panelflo-action-tool",
+      "name": "panelflo_action",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Webhook').item.json.body.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "chat-if-platform",
+      "name": "Chat IF Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Webhook').item.json.body.chatId, text: $json.output }) }}",
+        "options": {}
+      },
+      "id": "chat-send-telegram",
+      "name": "Chat Send Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        -90
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Webhook').item.json.body.chatId, type: 'text', text: { body: $json.output } }) }}",
+        "options": {}
+      },
+      "id": "chat-send-whatsapp",
+      "name": "Chat Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "digest-schedule-digest",
+      "name": "[Digest] Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/digest-users",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "digest-http-digest-users",
+      "name": "[Digest] Fetch Digest Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "digest-split-users",
+      "name": "[Digest] Split Out Users",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "digest-batch-users",
+      "name": "[Digest] Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/daily-brief?userId={{ $json.userId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "digest-http-daily-brief",
+      "name": "[Digest] Fetch Daily Brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $('Split In Batches').first().json;\nconst { tasksDueToday, overdueCount, topDeal } = $input.first().json.data;\nconst date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });\nlet msg = `Good morning! Here's your ${date} briefing:\\n\\n`;\nif (tasksDueToday.length > 0) {\n  msg += `Tasks due today (${tasksDueToday.length}):\\n`;\n  tasksDueToday.forEach((t, i) => { msg += `${i + 1}. ${t.title}\\n`; });\n} else {\n  msg += 'No tasks due today! ';\n}\nif (overdueCount > 0) msg += `\\nOverdue: ${overdueCount} task(s)`;\nif (topDeal) msg += `\\nTop deal: ${topDeal.title} ($${topDeal.value})`;\nreturn [{ json: { ...user, message: msg } }];"
+      },
+      "id": "digest-code-format-digest",
+      "name": "[Digest] Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "digest-if-platform",
+      "name": "[Digest] IF Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "digest-http-send-telegram",
+      "name": "[Digest] Send Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.chatId, type: 'text', text: { body: $json.message } }) }}",
+        "options": {}
+      },
+      "id": "digest-http-send-whatsapp",
+      "name": "[Digest] Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "overdue-schedule-overdue",
+      "name": "[Overdue] Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/overdue-tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "overdue-http-overdue",
+      "name": "[Overdue] Fetch Overdue Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "overdue-split-overdue",
+      "name": "[Overdue] Split Out Tasks",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "overdue-batch-overdue",
+      "name": "[Overdue] Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { taskTitle, daysOverdue } = $input.first().json;\nconst msg = `Overdue task (${daysOverdue}d): \"${taskTitle}\"\\nReply 'done: ${taskTitle}' to mark complete.`;\nreturn [{ json: { ...$input.first().json, message: msg } }];"
+      },
+      "id": "overdue-code-format-alert",
+      "name": "[Overdue] Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "overdue-if-platform-overdue",
+      "name": "[Overdue] IF Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "overdue-send-telegram-overdue",
+      "name": "[Overdue] Send Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.chatId, type: 'text', text: { body: $json.message } }) }}",
+        "options": {}
+      },
+      "id": "overdue-send-whatsapp-overdue",
+      "name": "[Overdue] Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 11 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "stale-schedule-stale",
+      "name": "[Stale] Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/stale-deals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "stale-http-stale",
+      "name": "[Stale] Fetch Stale Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "stale-split-stale",
+      "name": "[Stale] Split Out Deals",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "stale-batch-stale",
+      "name": "[Stale] Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const suggestion = $input.first().json.output.trim();\nconst deal = $('Split In Batches').first().json;\nconst msg = `Deal stale (${deal.daysStale}d): \"${deal.dealTitle}\" in ${deal.stage}\\nSuggested action: ${suggestion}`;\nreturn [{ json: { ...deal, message: msg } }];"
+      },
+      "id": "stale-code-format-nudge",
+      "name": "[Stale] Format Nudge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "stale-if-platform-stale",
+      "name": "[Stale] IF Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "stale-send-telegram-stale",
+      "name": "[Stale] Send Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.chatId, type: 'text', text: { body: $json.message } }) }}",
+        "options": {}
+      },
+      "id": "stale-send-whatsapp-stale",
+      "name": "[Stale] Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Deal \"' + $json.dealTitle + '\" with ' + ($json.contactName || 'the customer') + ' has been in ' + $json.stage + ' stage for ' + $json.daysStale + ' days. Suggest one specific next action in 10 words max.' }}",
+        "options": {
+          "systemMessage": "You suggest sales next actions. Reply with the action only - no preamble."
+        }
+      },
+      "id": "stale-ai-agent-stale",
+      "name": "[Stale] AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        880,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "stale-gemini-chat-model-stale",
+      "name": "[Stale] Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        880,
+        1500
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qLxIjmx61WLYAqJe",
+          "name": "Gemini (Panelflo Agent)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "weekly-schedule-weekly",
+      "name": "[Weekly] Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/admin-users-with-bot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "weekly-http-admins",
+      "name": "[Weekly] Fetch Admin Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "weekly-split-admins",
+      "name": "[Weekly] Split Out Admins",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "weekly-batch-admins",
+      "name": "[Weekly] Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PANELFLO_API_URL }}/api/n8n/weekly-stats?workspaceId={{ $json.workspaceId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.PANELFLO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "weekly-http-weekly-stats",
+      "name": "[Weekly] Fetch Weekly Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const admin = $('Split In Batches').first().json;\nconst s = $input.first().json.data;\nconst msg = `Weekly Recap:\\n\\n` +\n  `Tasks: ${s.tasksCompleted} completed / ${s.tasksCreated} created\\n` +\n  `Deals won: ${s.dealsWon} ($${s.dealsWonValue})\\n` +\n  `New contacts: ${s.newContacts}\\n` +\n  `Stale deals: ${s.staleDealsCount}`;\nreturn [{ json: { ...admin, message: msg } }];"
+      },
+      "id": "weekly-code-format-weekly",
+      "name": "[Weekly] Format Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.platform }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "weekly-if-platform-weekly",
+      "name": "[Weekly] IF Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "weekly-send-telegram-weekly",
+      "name": "[Weekly] Send Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.chatId, type: 'text', text: { body: $json.message } }) }}",
+        "options": {}
+      },
+      "id": "weekly-send-whatsapp-weekly",
+      "name": "[Weekly] Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        1800
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Flo Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flo Agent": {
+      "main": [
+        [
+          {
+            "node": "Chat IF Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Flo Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Flo Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "panelflo_action": {
+      "ai_tool": [
+        [
+          {
+            "node": "Flo Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat IF Telegram": {
+      "main": [
+        [
+          {
+            "node": "Chat Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Fetch Digest Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Fetch Digest Users": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Split Out Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Split Out Users": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "[Digest] Fetch Daily Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Fetch Daily Brief": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Format Message": {
+      "main": [
+        [
+          {
+            "node": "[Digest] IF Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] IF Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[Digest] Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Digest] Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "[Digest] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] Fetch Overdue Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Fetch Overdue Tasks": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] Split Out Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Split Out Tasks": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "[Overdue] Format Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Format Alert": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] IF Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] IF Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[Overdue] Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Overdue] Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "[Overdue] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Fetch Stale Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Fetch Stale Deals": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Split Out Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Split Out Deals": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "[Stale] AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Format Nudge": {
+      "main": [
+        [
+          {
+            "node": "[Stale] IF Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] IF Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[Stale] Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] AI Agent": {
+      "main": [
+        [
+          {
+            "node": "[Stale] Format Nudge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Stale] Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "[Stale] AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Fetch Admin Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Fetch Admin Users": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Split Out Admins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Split Out Admins": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "[Weekly] Fetch Weekly Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Fetch Weekly Stats": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Format Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Format Summary": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] IF Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] IF Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[Weekly] Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[Weekly] Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "[Weekly] Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

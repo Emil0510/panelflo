@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "building-panel": {
+      "url": "http://localhost:3001/api/mcp"
+    }
+  }
+}
