@@ -1,10 +1,14 @@
 -- Convert Deal.stage from enum to text
+ALTER TABLE "Deal" ALTER COLUMN "stage" DROP DEFAULT;
 ALTER TABLE "Deal" ALTER COLUMN "stage" TYPE TEXT USING "stage"::TEXT;
-DROP TYPE IF EXISTS "DealStage";
+ALTER TABLE "Deal" ALTER COLUMN "stage" SET DEFAULT 'LEAD';
+DROP TYPE IF EXISTS "DealStage" CASCADE;
 
 -- Convert Task.status from enum to text
+ALTER TABLE "Task" ALTER COLUMN "status" DROP DEFAULT;
 ALTER TABLE "Task" ALTER COLUMN "status" TYPE TEXT USING "status"::TEXT;
-DROP TYPE IF EXISTS "TaskStatus";
+ALTER TABLE "Task" ALTER COLUMN "status" SET DEFAULT 'TODO';
+DROP TYPE IF EXISTS "TaskStatus" CASCADE;
 
 -- Create PipelineColumn table
 CREATE TABLE "PipelineColumn" (
