@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Light Surface Container Background -->
+  <rect width="512" height="512" rx="112" fill="#EBF0E5"/>
+  
+  <!-- Left Column Bar (Forest Emerald) -->
+  <rect x="140" y="128" width="56" height="256" rx="14" fill="#2B5748"/>
+  
+  <!-- Chat Bubble Loop -->
+  <path d="M220 128H320C350.938 128 376 153.062 376 184V200C376 230.938 350.938 256 320 256H220V128Z" fill="#2B5748"/>
+  
+  <!-- Chat Tail -->
+  <path d="M220 256L196 280V256H220Z" fill="#2B5748"/>
+  
+  <!-- Gemini AI Spark Accent (Sage Green fill with Emerald Center) -->
+  <circle cx="300" cy="312" r="28" fill="#9CB080"/>
+  <path d="M300 296L303 309L316 312L303 315L300 328L297 315L284 312L297 309L300 296Z" fill="#2B5748"/>
+</svg>

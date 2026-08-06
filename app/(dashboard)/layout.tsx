@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { SidebarNav } from "@/components/sidebar-nav";
@@ -24,12 +25,20 @@ export default async function DashboardLayout({
       <aside className="hidden w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-[18px]">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
-            style={{ background: "linear-gradient(135deg, #2B5748 0%, #618764 100%)" }}
-          >
-            <span className="text-[11px] font-extrabold tracking-tight">P</span>
-          </div>
+          <Image
+            src="/icon-light.svg"
+            alt="Panelflo"
+            width={28}
+            height={28}
+            className="block dark:hidden rounded-lg"
+          />
+          <Image
+            src="/icon-dark.svg"
+            alt="Panelflo"
+            width={28}
+            height={28}
+            className="hidden dark:block rounded-lg"
+          />
           <span className="text-[15px] font-bold tracking-tight text-foreground">
             Panelflo
           </span>

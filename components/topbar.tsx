@@ -45,12 +45,10 @@ export function Topbar({ unreadNotifications = 0 }: { unreadNotifications?: numb
         </SheetTrigger>
         <SheetContent side="left" className="w-[260px] p-0">
           <SheetTitle className="flex items-center gap-2.5 px-5 py-[18px] border-b border-border">
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
-              style={{ background: "linear-gradient(135deg, #2B5748 0%, #618764 100%)" }}
-            >
-              <span className="text-[11px] font-extrabold">P</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon-light.svg" alt="Panelflo" width={28} height={28} className="block dark:hidden rounded-lg" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon-dark.svg" alt="Panelflo" width={28} height={28} className="hidden dark:block rounded-lg" />
             <span className="text-[15px] font-bold tracking-tight">Panelflo</span>
           </SheetTitle>
           <SidebarNav onNavigate={() => setMobileOpen(false)} />

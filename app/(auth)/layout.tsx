@@ -16,9 +16,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-            <span className="text-sm font-extrabold text-white">P</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-dark.svg" alt="Panelflo" width={32} height={32} className="rounded-xl" />
           <span className="text-xl font-bold tracking-tight text-white">Panelflo</span>
         </div>
 
@@ -57,12 +56,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
         {/* Mobile-only logo */}
         <div className="mb-8 flex items-center gap-2.5 text-foreground lg:hidden">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
-            style={{ background: "linear-gradient(135deg, #2B5748 0%, #618764 100%)" }}
-          >
-            <span className="text-[11px] font-extrabold">P</span>
-          </div>
+          <img src="/icon-light.svg" alt="Panelflo" width={28} height={28} className="block dark:hidden rounded-lg" />
+          <img src="/icon-dark.svg" alt="Panelflo" width={28} height={28} className="hidden dark:block rounded-lg" />
           <span className="text-xl font-bold tracking-tight">Panelflo</span>
         </div>
 
