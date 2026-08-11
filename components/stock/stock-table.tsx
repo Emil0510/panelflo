@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/empty-state";
 import { AdjustStockDialog } from "@/components/stock/adjust-stock-dialog";
 import { StockImportDialog } from "@/components/stock/stock-import-dialog";
 import {
@@ -194,13 +195,16 @@ export function StockTable({ products }: { products: ProductRow[] }) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td
-                  colSpan={8}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  {products.length === 0
-                    ? "No products yet. Add your first product to start tracking stock."
-                    : "No products match the current filter."}
+                <td colSpan={8} className="p-0">
+                  <EmptyState
+                    icon={Package}
+                    title={products.length === 0 ? "No products yet" : "No products match your filters"}
+                    description={
+                      products.length === 0
+                        ? "Add your first product to start tracking stock."
+                        : "Try adjusting your search or filters."
+                    }
+                  />
                 </td>
               </tr>
             ) : (
