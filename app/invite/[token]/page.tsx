@@ -14,7 +14,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
         Panelflo
         <span className="h-2.5 w-2.5 rounded-full bg-primary" />
       </div>
-      <div className="w-full max-w-md space-y-4 rounded-xl border bg-white p-8 text-center shadow-sm">
+      <div className="w-full max-w-md space-y-4 rounded-xl border bg-card p-8 text-center text-card-foreground shadow-sm">
         {!invite ? (
           <>
             <h1 className="text-xl font-semibold">Invite expired</h1>
