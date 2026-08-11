@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowUpDown, Plus } from "lucide-react";
+import { ArrowUpDown, Plus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { ContactFormSheet, type WorkspaceUser } from "@/components/contacts/contact-form";
 import { CsvImportDialog } from "@/components/contacts/csv-import-dialog";
+import { EmptyState } from "@/components/empty-state";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -176,8 +177,16 @@ export function ContactsTable({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-muted-foreground">
-                  No contacts found. Add your first contact to get started.
+                <td colSpan={7} className="p-0">
+                  <EmptyState
+                    icon={Users}
+                    title={contacts.length === 0 ? "No contacts yet" : "No contacts match your filters"}
+                    description={
+                      contacts.length === 0
+                        ? "Add your first contact to start building your CRM."
+                        : "Try adjusting your search or filters."
+                    }
+                  />
                 </td>
               </tr>
             ) : (
