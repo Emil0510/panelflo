@@ -12,12 +12,20 @@ Redesign every page except `(marketing)` (landing + pricing, already redesigned 
 - **Operational**: `tasks`, `stock`
 - **Account**: `team`, `notifications`, `billing`, `settings`
 
-## Current state
+## Current state (corrected after live verification)
 
 - `app/globals.css` already defines a full design-token system: light + dark palettes, brand green (`#2B5748` / `#9CB080`), status/priority badge colors, shadows, radii, transitions ("Soft UI Evolution"). This is solid — not being touched.
 - `components/theme-toggle.tsx` and full light/dark support already exist.
 - Full shadcn/ui primitive set already installed (`components/ui/*`).
-- What's missing: shared page-level primitives. Every page currently hand-rolls its own header/empty-state/stat block, which is why pages read as generic shadcn rather than branded. Confirmed on `/login`: plain centered card, default spacing, no hierarchy, doesn't match the landing page's confidence.
+- **Correction:** an earlier pass of this spec claimed `/login` was plain/generic. That was tested at a 710px viewport, which hides the desktop branded panel (`hidden lg:flex`) by design. At proper desktop width, verified live (signed in with a test account) that the following are already well-designed and do NOT need a rework: `(auth)/layout.tsx` + login/signup (branded gradient split-panel, feature checklist, clean form), the dashboard shell (`(dashboard)/layout.tsx`, `sidebar-nav.tsx`, `topbar.tsx`, `user-menu.tsx` — proper nav sections/active states/search/notification bell/theme toggle/plan badge), and the dashboard home page (stat cards, iconed empty states like "You're all caught up today 🎉").
+- Verified live (full page-by-page pass, all 11 dashboard/auth/invite routes) with a real test account. Also already well-designed, no rework needed: `notifications` (proper icon + bold title + subtitle empty state) and `billing` (polished pricing cards with "Popular" badge, current-plan summary).
+- Confirmed genuinely bare: `contacts` (plain table, bare "No contacts found..." text row, no icon/card treatment), `pipeline` (kanban columns with plain "No deals" text, sparse layout, dead space), `stock` (same bare-table pattern as contacts), `team` (bare table, minimal), `settings` (plain unstyled cards, no icons/hierarchy), `tasks` (plain list/board, no card wrapper, though it does have one emoji touch in its empty state). `invite/[token]/page.tsx` hardcodes `bg-white` in its card — directly violates the documented dark-mode rule ("never use bg-white/bg-slate-50/bg-gray-50") from the knowledge-base dev notes, and doesn't use the shared auth branded-panel layout at all (custom centered-card layout instead).
+- What's missing project-wide: shared page-level primitives (`PageHeader`, `StatCard`, `EmptyState`). Even the polished pages don't use shared components for these — each hand-rolls its own markup, which is why the bare pages in particular fall back to default/minimal treatment.
+
+## Differentiated depth (per user direction: still touch every page, but proportional to actual need)
+
+- **Light consistency pass** (small, low-risk tweaks only — these are already good): auth shell (login/signup/verify-email), dashboard shell, dashboard home, notifications, billing. No structural rework.
+- **Full UX pass** (real work): contacts (list + detail), pipeline, tasks, stock, team, settings, invite. Apply the shared primitives, fix empty states, improve hierarchy/spacing/table treatment, and for `invite` specifically: fix the `bg-white` dark-mode violation and align it to the branded auth-panel pattern.
 
 ## Approach
 
