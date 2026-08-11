@@ -22,10 +22,17 @@ Redesign every page except `(marketing)` (landing + pricing, already redesigned 
 - Confirmed genuinely bare: `contacts` (plain table, bare "No contacts found..." text row, no icon/card treatment), `pipeline` (kanban columns with plain "No deals" text, sparse layout, dead space), `stock` (same bare-table pattern as contacts), `team` (bare table, minimal), `settings` (plain unstyled cards, no icons/hierarchy), `tasks` (plain list/board, no card wrapper, though it does have one emoji touch in its empty state). `invite/[token]/page.tsx` hardcodes `bg-white` in its card — directly violates the documented dark-mode rule ("never use bg-white/bg-slate-50/bg-gray-50") from the knowledge-base dev notes, and doesn't use the shared auth branded-panel layout at all (custom centered-card layout instead).
 - What's missing project-wide: shared page-level primitives (`PageHeader`, `StatCard`, `EmptyState`). Even the polished pages don't use shared components for these — each hand-rolls its own markup, which is why the bare pages in particular fall back to default/minimal treatment.
 
-## Differentiated depth (per user direction: still touch every page, but proportional to actual need)
+## Final scope (after reading every target file's actual code, not just screenshots)
 
-- **Light consistency pass** (small, low-risk tweaks only — these are already good): auth shell (login/signup/verify-email), dashboard shell, dashboard home, notifications, billing. No structural rework.
-- **Full UX pass** (real work): contacts (list + detail), pipeline, tasks, stock, team, settings, invite. Apply the shared primitives, fix empty states, improve hierarchy/spacing/table treatment, and for `invite` specifically: fix the `bg-white` dark-mode violation and align it to the branded auth-panel pattern.
+Screenshots on a zero-data test account made pages look bare when the real gap was empty-state markup, not the pages themselves. Reading the code directly showed: tasks (full filter/grouping/kanban/detail-sheet system), pipeline (real drag-drop kanban with inline column editing), team (proper shadcn `Table`, polished member detail sheet), stock (sortable table with low-stock badges, quick-adjust), and settings (clean card layout) are all already well-built, using the design tokens correctly. Rebuilding them would be pure churn against working, well-crafted code (drag-drop, filters, sheets) for no real visual gain, and carries real regression risk. Confirmed with the user — scope is now the actual gaps only:
+
+1. New shared `components/empty-state.tsx` (icon + title + optional description).
+2. Apply it to `contacts-table.tsx` and `stock-table.tsx` empty rows (currently plain centered text, no icon; also add the "no results vs. no data at all" distinction to contacts to match what stock already does).
+3. Lightweight icon treatment for pipeline's per-column "No deals" text (not the full `EmptyState` — column is only `w-64`, a small icon above the text is enough).
+4. Icons on the three `CardTitle`s in `settings/page.tsx` (Workspace/Bot connections/Account), matching the icon-forward style used elsewhere in the app.
+5. Fix `invite/[token]/page.tsx`: hardcoded `bg-white` → `bg-card` (dark-mode bug, breaks in dark mode since it never adapts). Scope is just this token fix, not a structural rework to the auth branded-panel layout.
+
+No changes to auth shell, dashboard shell, dashboard home, notifications, billing, tasks, pipeline (beyond item 3), team, stock (beyond item 2), or contacts (beyond item 2) — all already meet the bar.
 
 ## Approach
 
