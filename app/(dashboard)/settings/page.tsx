@@ -1,4 +1,4 @@
-import { Check, Minus } from "lucide-react";
+import { Bot, Building2, Check, Minus, User } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -28,7 +28,10 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Workspace</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            Workspace
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>
@@ -57,7 +60,10 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Bot connections</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bot className="h-4 w-4 text-muted-foreground" />
+            Bot connections
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between text-sm">
@@ -86,7 +92,10 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Account</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <User className="h-4 w-4 text-muted-foreground" />
+            Account
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>

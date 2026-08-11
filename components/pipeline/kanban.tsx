@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { differenceInDays } from "date-fns";
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Inbox, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
@@ -262,7 +262,10 @@ function StageColumn({
             <DraggableDeal key={deal.id} deal={deal} onClick={() => onCardClick(deal)} />
           ))}
           {deals.length === 0 && (
-            <p className="py-6 text-center text-xs text-muted-foreground">No deals</p>
+            <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+              <Inbox className="h-4 w-4 text-muted-foreground/50" />
+              <p className="text-xs text-muted-foreground">No deals</p>
+            </div>
           )}
         </div>
       )}
