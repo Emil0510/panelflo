@@ -120,7 +120,7 @@ function SignupForm() {
 
         <Button
           type="submit"
-          className="mt-1 h-10 w-full font-semibold"
+          className="mt-1 h-10 w-full font-semibold transition-transform hover:-translate-y-0.5 hover:shadow-lg"
           disabled={loading}
         >
           {loading ? "Creating account…" : "Create account"}

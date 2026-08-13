@@ -35,6 +35,9 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# superpowers brainstorming companion
+.superpowers/
+
 # prisma generated
 # (keep schema + migrations, ignore generated client if regenerated on deploy)
 env.vercel

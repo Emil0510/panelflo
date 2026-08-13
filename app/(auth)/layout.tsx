@@ -1,3 +1,5 @@
+import { Mascot } from "@/components/auth/mascot";
+
 const FEATURES = [
   { label: "CRM & Contacts",    desc: "Manage leads, clients, and every interaction" },
   { label: "Deal Pipeline",     desc: "Kanban pipeline with custom stages" },
@@ -11,30 +13,44 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen">
       {/* Brand panel */}
       <div
-        className="hidden flex-col justify-between p-10 lg:flex lg:w-[44%]"
+        className="relative hidden flex-col justify-between overflow-hidden p-10 lg:flex lg:w-[44%]"
         style={{ background: "linear-gradient(145deg, #1a2a23 0%, #2B5748 55%, #618764 100%)" }}
       >
+        {/* Drifting dot-grid background */}
+        <div
+          className="pointer-events-none absolute inset-0 animate-dotgrid-drift"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+          }}
+        />
+
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
+        <div className="relative flex animate-auth-fade-down items-center gap-2.5 opacity-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icon-dark.svg" alt="Panelflo" width={32} height={32} className="rounded-xl" />
           <span className="text-xl font-bold tracking-tight text-white">Panelflo</span>
         </div>
 
-        {/* Quote + features */}
-        <div className="space-y-8">
-          <div>
+        {/* Mascot + headline + features */}
+        <div className="relative space-y-8">
+          <Mascot />
+
+          <div className="animate-auth-fade-up text-center opacity-0 [animation-delay:300ms]">
             <p className="text-2xl font-semibold leading-snug text-white">
-              Run your entire business<br />from one clean panel.
-            </p>
-            <p className="mt-3 text-sm text-white/50">
-              Built for teams that move fast.
+              Run your business.
+              <br />
+              <span className="text-[#9CB080]">One message at a time.</span>
             </p>
           </div>
 
           <ul className="space-y-3.5">
-            {FEATURES.map((f) => (
-              <li key={f.label} className="flex items-start gap-3">
+            {FEATURES.map((f, i) => (
+              <li
+                key={f.label}
+                className="flex animate-auth-fade-up items-start gap-3 opacity-0"
+                style={{ animationDelay: `${450 + i * 100}ms` }}
+              >
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/15">
                   <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" />
@@ -49,7 +65,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </ul>
         </div>
 
-        <p className="text-xs text-white/25">© 2026 Panelflo. All rights reserved.</p>
+        <p className="relative text-xs text-white/25">© 2026 Panelflo. All rights reserved.</p>
       </div>
 
       {/* Form panel */}
@@ -61,7 +77,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="text-xl font-bold tracking-tight">Panelflo</span>
         </div>
 
-        <div className="w-full max-w-sm">{children}</div>
+        <div className="w-full max-w-sm animate-auth-fade-up opacity-0 [animation-delay:150ms]">
+          {children}
+        </div>
       </div>
     </div>
   );
