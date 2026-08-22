@@ -958,58 +958,67 @@ export async function POST(req: Request) {
   const parsed = dealSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0].message, 400);
 
-  const stage = parsed.data.stage ?? "LEAD";
-  let wonOnCreate = false;
-  if (parsed.data.lineItems && parsed.data.lineItems.length > 0) {
-    const cols = await getWorkspacePipelineColumns(session.workspaceId);
-    wonOnCreate = cols.find((c) => c.key === stage)?.isWonStage ?? false;
+  const cols = await getWorkspacePipelineColumns(session.workspaceId);
+  const stage = parsed.data.stage ?? cols[0]?.key ?? "LEAD";
+  const targetCol = cols.find((c) => c.key === stage);
+  if (parsed.data.stage !== undefined && !targetCol) {
+    return fail("Unknown pipeline stage", 400);
   }
+  const wonOnCreate = targetCol?.isWonStage ?? false;
 
   try {
-    const [deal, notifyPairs] = await db.$transaction(async (tx) => {
-      const created = await tx.deal.create({
-        data: {
-          workspaceId: session.workspaceId,
-          title: parsed.data.title,
-          value: parsed.data.value ?? 0,
-          stage,
-          contactId: parsed.data.contactId || null,
-          assignedToId: parsed.data.assignedToId || null,
-        },
-      });
+    const [deal, notifyPairs] = await db.$transaction(
+      async (tx) => {
+        const created = await tx.deal.create({
+          data: {
+            workspaceId: session.workspaceId,
+            title: parsed.data.title,
+            value: parsed.data.value ?? 0,
+            stage,
+            contactId: parsed.data.contactId || null,
+            assignedToId: parsed.data.assignedToId || null,
+          },
+        });
 
-      if (parsed.data.lineItems) {
-        for (const li of parsed.data.lineItems) {
-          const product = await tx.product.findFirst({
-            where: { id: li.productId, workspaceId: session.workspaceId },
-          });
-          if (!product) throw new StockError("One of the selected products no longer exists");
-          await tx.dealLineItem.create({
-            data: {
-              dealId: created.id,
-              productId: li.productId,
-              quantity: li.quantity,
-              unitPriceAtSale: product.unitPrice,
-            },
+        if (parsed.data.lineItems) {
+          for (const li of parsed.data.lineItems) {
+            const product = await tx.product.findFirst({
+              where: { id: li.productId, workspaceId: session.workspaceId, deleted: false },
+            });
+            if (!product) throw new StockError("One of the selected products no longer exists");
+            await tx.dealLineItem.create({
+              data: {
+                dealId: created.id,
+                productId: li.productId,
+                quantity: li.quantity,
+                unitPriceAtSale: product.unitPrice,
+              },
+            });
+          }
+        }
+
+        let notifyPairs: Awaited<ReturnType<typeof applyStockForWonTransition>> = [];
+        if (wonOnCreate && parsed.data.lineItems && parsed.data.lineItems.length > 0) {
+          notifyPairs = await applyStockForWonTransition(tx, {
+            lineItems: parsed.data.lineItems,
+            entering: true,
+            dealTitle: created.title,
+            actorUserId: session.userId,
           });
         }
+
+        return [created, notifyPairs] as const;
+      },
+      { timeout: 20000, maxWait: 5000 }
+    );
+
+    try {
+      for (const { before, after } of notifyPairs) {
+        await notifyIfLowStockCrossed(before, after);
       }
-
-      let notifyPairs: Awaited<ReturnType<typeof applyStockForWonTransition>> = [];
-      if (wonOnCreate && parsed.data.lineItems) {
-        notifyPairs = await applyStockForWonTransition(tx, {
-          lineItems: parsed.data.lineItems,
-          entering: true,
-          dealTitle: created.title,
-          actorUserId: session.userId,
-        });
-      }
-
-      return [created, notifyPairs] as const;
-    });
-
-    for (const { before, after } of notifyPairs) {
-      await notifyIfLowStockCrossed(before, after);
+    } catch {
+      // Best-effort — the deal/stock change already committed successfully;
+      // a notification failure must not surface as a request error.
     }
 
     return ok(deal);
@@ -1019,6 +1028,8 @@ export async function POST(req: Request) {
   }
 }
 ```
+
+**Note on this task's code (differs from the original Task 6 pre-fix pattern, applying the same lessons up front):** stage validation now runs unconditionally (not just when lineItems are present) via a single `cols` lookup reused for both the default-stage fallback and the `isWonStage` check; product lookup includes `deleted: false`; the transaction has an explicit timeout; low-stock notifications are best-effort after commit. These mirror the fixes Task 6 needed after review — applying them here up front avoids a guaranteed repeat of the same fix loop.
 
 - [ ] **Step 2: Verify**
 
