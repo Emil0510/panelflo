@@ -11,12 +11,13 @@ export default async function PipelinePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [deals, contacts, users, columns] = await Promise.all([
+  const [deals, contacts, users, columns, products] = await Promise.all([
     db.deal.findMany({
       where: { workspaceId: session.user.workspaceId },
       include: {
         contact: { select: { id: true, firstName: true, lastName: true, company: true } },
         assignedTo: { select: { id: true, name: true } },
+        lineItems: true,
       },
       orderBy: { lastMovedAt: "desc" },
     }),
@@ -30,6 +31,11 @@ export default async function PipelinePage() {
       select: { id: true, name: true },
     }),
     getWorkspacePipelineColumns(session.user.workspaceId),
+    db.product.findMany({
+      where: { workspaceId: session.user.workspaceId, deleted: false },
+      select: { id: true, name: true, unitPrice: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (
@@ -48,6 +54,7 @@ export default async function PipelinePage() {
             }
           : null,
         assignedTo: d.assignedTo,
+        lineItems: d.lineItems.map((li) => ({ productId: li.productId, quantity: li.quantity })),
       }))}
       contacts={contacts.map((c) => ({
         id: c.id,
@@ -55,6 +62,7 @@ export default async function PipelinePage() {
       }))}
       users={users}
       columns={columns}
+      products={products.map((p) => ({ id: p.id, name: p.name, unitPrice: Number(p.unitPrice) }))}
     />
   );
 }

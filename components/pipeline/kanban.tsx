@@ -41,6 +41,7 @@ export type DealCard = {
   lastMovedAt: string;
   contact: { id: string; name: string; company: string | null } | null;
   assignedTo: { id: string; name: string | null } | null;
+  lineItems: { productId: string; quantity: number }[];
 };
 
 function DealCardView({
@@ -349,11 +350,13 @@ export function PipelineKanban({
   contacts,
   users,
   columns: initialColumns,
+  products,
 }: {
   deals: DealCard[];
   contacts: { id: string; name: string }[];
   users: { id: string; name: string | null }[];
   columns: KanbanColumn[];
+  products: { id: string; name: string; unitPrice: number }[];
 }) {
   const router = useRouter();
   const [deals, setDeals] = useState(initialDeals);
@@ -367,6 +370,7 @@ export function PipelineKanban({
     stage: initialColumns[0]?.key ?? "LEAD",
     contactId: "",
     assignedToId: "",
+    lineItems: [],
   });
 
   const [lastDealsProps, setLastDealsProps] = useState(initialDeals);
@@ -426,7 +430,7 @@ export function PipelineKanban({
   }
 
   function openAdd(stage: string) {
-    setFormInitial({ title: "", value: "", stage, contactId: "", assignedToId: "" });
+    setFormInitial({ title: "", value: "", stage, contactId: "", assignedToId: "", lineItems: [] });
     setSheetOpen(true);
   }
 
@@ -438,6 +442,7 @@ export function PipelineKanban({
       stage: deal.stage,
       contactId: deal.contact?.id ?? "",
       assignedToId: deal.assignedTo?.id ?? "",
+      lineItems: deal.lineItems,
     });
     setSheetOpen(true);
   }
@@ -512,6 +517,7 @@ export function PipelineKanban({
         contacts={contacts}
         users={users}
         columns={columns}
+        products={products}
       />
     </>
   );
