@@ -66,7 +66,9 @@ export default async function ContactDetailPage({
   ]);
   if (!contact) notFound();
 
-  const statusMeta = statuses.find((s) => s.key === contact.status);
+  const statusMeta = statuses.find(
+    (s: Awaited<ReturnType<typeof getWorkspaceContactColumns>>[number]) => s.key === contact.status
+  );
 
   return (
     <div className="space-y-6">
