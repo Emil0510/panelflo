@@ -115,8 +115,9 @@ model Product {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  movements StockMovement[]
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  movements     StockMovement[]
+  dealLineItems DealLineItem[]
 
   @@unique([workspaceId, sku])
   @@index([workspaceId])
@@ -177,6 +178,7 @@ model Deal {
   contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   assignedTo User?     @relation("DealAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   tasks      Task[]
+  lineItems  DealLineItem[]
 
   @@index([workspaceId])
 }
@@ -250,6 +252,7 @@ model PipelineColumn {
   color       String    @default("#64748B")
   order       Int
   isSystem    Boolean   @default(false)
+  isWonStage  Boolean   @default(false)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, key])
@@ -282,6 +285,21 @@ model ContactColumn {
 
   @@unique([workspaceId, key])
   @@index([workspaceId])
+}
+
+model DealLineItem {
+  id              String   @id @default(cuid())
+  dealId          String
+  productId       String
+  quantity        Int
+  unitPriceAtSale Decimal  @db.Decimal(12, 2)
+  createdAt       DateTime @default(now())
+
+  deal    Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([dealId])
+  @@index([productId])
 }
 
 model BotSession {
