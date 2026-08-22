@@ -65,77 +65,103 @@ export async function PATCH(
   let wonAfter = false;
   if (stageChanged) {
     const cols = await getWorkspacePipelineColumns(session.workspaceId);
+    const target = cols.find((c) => c.key === parsed.data.stage);
+    if (!target) return fail("Unknown pipeline stage", 400);
     wonBefore = cols.find((c) => c.key === existing.stage)?.isWonStage ?? false;
-    wonAfter = cols.find((c) => c.key === parsed.data.stage)?.isWonStage ?? false;
+    wonAfter = target.isWonStage;
   }
 
-  const effectiveLineItems = parsed.data.lineItems
-    ? parsed.data.lineItems
-    : existing.lineItems.map((li) => ({ productId: li.productId, quantity: li.quantity }));
+  // Entering won consumes whatever the client just submitted (or the
+  // persisted set, if lineItems wasn't part of this request). Leaving won
+  // must restore what was ACTUALLY deducted, not whatever the client is
+  // submitting now — those can differ when stage and lineItems change in
+  // the same request. existing.lineItems is read here, before the
+  // transaction replaces it.
+  const restoreItems = existing.lineItems.map((li) => ({
+    productId: li.productId,
+    quantity: li.quantity,
+  }));
+  const consumeItems = parsed.data.lineItems ?? restoreItems;
+  const stockItems = wonAfter ? consumeItems : restoreItems;
+
+  // Preserve each line item's original unitPriceAtSale snapshot across
+  // edits that don't touch that product — only a newly-added product line
+  // gets priced at today's rate.
+  const priorPriceByProduct = new Map(
+    existing.lineItems.map((li) => [li.productId, li.unitPriceAtSale])
+  );
 
   try {
-    const [deal, notifyPairs] = await db.$transaction(async (tx) => {
-      if (parsed.data.lineItems) {
-        await tx.dealLineItem.deleteMany({ where: { dealId: existing.id } });
-        for (const li of parsed.data.lineItems) {
-          const product = await tx.product.findFirst({
-            where: { id: li.productId, workspaceId: session.workspaceId },
+    const [deal, notifyPairs] = await db.$transaction(
+      async (tx) => {
+        if (parsed.data.lineItems) {
+          await tx.dealLineItem.deleteMany({ where: { dealId: existing.id } });
+          for (const li of parsed.data.lineItems) {
+            const product = await tx.product.findFirst({
+              where: { id: li.productId, workspaceId: session.workspaceId, deleted: false },
+            });
+            if (!product) throw new StockError("One of the selected products no longer exists");
+            await tx.dealLineItem.create({
+              data: {
+                dealId: existing.id,
+                productId: li.productId,
+                quantity: li.quantity,
+                unitPriceAtSale: priorPriceByProduct.get(li.productId) ?? product.unitPrice,
+              },
+            });
+          }
+        }
+
+        const updated = await tx.deal.update({
+          where: { id: existing.id },
+          data: {
+            ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
+            ...(parsed.data.value !== undefined ? { value: parsed.data.value } : {}),
+            ...(parsed.data.stage !== undefined ? { stage: parsed.data.stage } : {}),
+            ...(parsed.data.contactId !== undefined
+              ? { contactId: parsed.data.contactId === "" ? null : parsed.data.contactId }
+              : {}),
+            ...(parsed.data.assignedToId !== undefined
+              ? { assignedToId: parsed.data.assignedToId === "" ? null : parsed.data.assignedToId }
+              : {}),
+            ...(stageChanged ? { lastMovedAt: new Date() } : {}),
+          },
+        });
+
+        let notifyPairs: Awaited<ReturnType<typeof applyStockForWonTransition>> = [];
+        if (wonBefore !== wonAfter && stockItems.length > 0) {
+          notifyPairs = await applyStockForWonTransition(tx, {
+            lineItems: stockItems,
+            entering: wonAfter,
+            dealTitle: updated.title,
+            actorUserId: session.userId,
           });
-          if (!product) throw new StockError("One of the selected products no longer exists");
-          await tx.dealLineItem.create({
+        }
+
+        if (stageChanged) {
+          await tx.activity.create({
             data: {
-              dealId: existing.id,
-              productId: li.productId,
-              quantity: li.quantity,
-              unitPriceAtSale: product.unitPrice,
+              workspaceId: session.workspaceId,
+              contactId: existing.contactId,
+              type: "DEAL_MOVED",
+              content: `Deal "${existing.title}" moved from ${existing.stage} to ${updated.stage}`,
+              createdById: session.userId,
             },
           });
         }
+
+        return [updated, notifyPairs] as const;
+      },
+      { timeout: 20000, maxWait: 5000 }
+    );
+
+    try {
+      for (const { before, after } of notifyPairs) {
+        await notifyIfLowStockCrossed(before, after);
       }
-
-      const updated = await tx.deal.update({
-        where: { id: existing.id },
-        data: {
-          ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
-          ...(parsed.data.value !== undefined ? { value: parsed.data.value } : {}),
-          ...(parsed.data.stage !== undefined ? { stage: parsed.data.stage } : {}),
-          ...(parsed.data.contactId !== undefined
-            ? { contactId: parsed.data.contactId === "" ? null : parsed.data.contactId }
-            : {}),
-          ...(parsed.data.assignedToId !== undefined
-            ? { assignedToId: parsed.data.assignedToId === "" ? null : parsed.data.assignedToId }
-            : {}),
-          ...(stageChanged ? { lastMovedAt: new Date() } : {}),
-        },
-      });
-
-      let notifyPairs: Awaited<ReturnType<typeof applyStockForWonTransition>> = [];
-      if (wonBefore !== wonAfter && effectiveLineItems.length > 0) {
-        notifyPairs = await applyStockForWonTransition(tx, {
-          lineItems: effectiveLineItems,
-          entering: wonAfter,
-          dealTitle: updated.title,
-          actorUserId: session.userId,
-        });
-      }
-
-      if (stageChanged) {
-        await tx.activity.create({
-          data: {
-            workspaceId: session.workspaceId,
-            contactId: existing.contactId,
-            type: "DEAL_MOVED",
-            content: `Deal "${existing.title}" moved from ${existing.stage} to ${updated.stage}`,
-            createdById: session.userId,
-          },
-        });
-      }
-
-      return [updated, notifyPairs] as const;
-    });
-
-    for (const { before, after } of notifyPairs) {
-      await notifyIfLowStockCrossed(before, after);
+    } catch {
+      // Best-effort — the deal/stock change already committed successfully;
+      // a notification failure must not surface as a request error.
     }
 
     if (stageChanged) {
