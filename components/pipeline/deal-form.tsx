@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -20,6 +21,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+export type DealLineItemValue = { productId: string; quantity: number };
+
 export type DealFormValues = {
   id?: string;
   title: string;
@@ -27,7 +30,85 @@ export type DealFormValues = {
   stage: string;
   contactId: string;
   assignedToId: string;
+  lineItems: DealLineItemValue[];
 };
+
+function LineItemsEditor({
+  lineItems,
+  products,
+  onChange,
+}: {
+  lineItems: DealLineItemValue[];
+  products: { id: string; name: string; unitPrice: number }[];
+  onChange: (items: DealLineItemValue[]) => void;
+}) {
+  function addRow() {
+    const firstUnused = products.find((p) => !lineItems.some((li) => li.productId === p.id));
+    if (!firstUnused) return;
+    onChange([...lineItems, { productId: firstUnused.id, quantity: 1 }]);
+  }
+
+  function updateRow(index: number, patch: Partial<DealLineItemValue>) {
+    onChange(lineItems.map((li, i) => (i === index ? { ...li, ...patch } : li)));
+  }
+
+  function removeRow(index: number) {
+    onChange(lineItems.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label>Products</Label>
+      {lineItems.length === 0 && (
+        <p className="text-xs text-muted-foreground">No products attached — this deal is tracked by value only.</p>
+      )}
+      <div className="space-y-2">
+        {lineItems.map((item, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Select
+              value={item.productId}
+              onValueChange={(v) => updateRow(i, { productId: v })}
+            >
+              <SelectTrigger className="h-8 flex-1 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              value={item.quantity}
+              onChange={(e) => updateRow(i, { quantity: Number(e.target.value) || 1 })}
+              className="h-8 w-16 text-sm"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => removeRow(i)}
+            >
+              <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      {lineItems.length < products.length && (
+        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addRow}>
+          <Plus className="h-3.5 w-3.5" />
+          Add product
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export function DealFormSheet({
   open,
@@ -36,6 +117,7 @@ export function DealFormSheet({
   contacts,
   users,
   columns,
+  products,
   onDelete,
 }: {
   open: boolean;
@@ -44,6 +126,7 @@ export function DealFormSheet({
   contacts: { id: string; name: string }[];
   users: { id: string; name: string | null }[];
   columns: { key: string; label: string }[];
+  products: { id: string; name: string; unitPrice: number }[];
   onDelete?: () => void;
 }) {
   const router = useRouter();
@@ -79,6 +162,7 @@ export function DealFormSheet({
         stage: values.stage,
         contactId: values.contactId || null,
         assignedToId: values.assignedToId || null,
+        lineItems: values.lineItems,
       }),
     });
     setSaving(false);
@@ -103,7 +187,7 @@ export function DealFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md">
+      <SheetContent className="sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{values.id ? "Edit deal" : "Add deal"}</SheetTitle>
         </SheetHeader>
@@ -180,6 +264,13 @@ export function DealFormSheet({
               </SelectContent>
             </Select>
           </div>
+          {products.length > 0 && (
+            <LineItemsEditor
+              lineItems={values.lineItems}
+              products={products}
+              onChange={(items) => set("lineItems", items)}
+            />
+          )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <Button onClick={save} disabled={saving} className="flex-1">
