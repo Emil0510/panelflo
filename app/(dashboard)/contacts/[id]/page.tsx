@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { getWorkspaceContactColumns } from "@/lib/columns";
 import { db } from "@/lib/db";
+import { scopePaymentsToSession } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,34 @@ export default async function ContactDetailPage({
     getWorkspaceContactColumns(session.user.workspaceId),
   ]);
   if (!contact) notFound();
+
+  const apiSession = {
+    userId: session.user.id,
+    workspaceId: session.user.workspaceId,
+    role: session.user.role,
+  };
+
+  const dealIds = contact.deals.map((d) => d.id);
+  const payments =
+    dealIds.length > 0
+      ? await db.payment.findMany({
+          where: { ...scopePaymentsToSession(apiSession), dealId: { in: dealIds } },
+          select: { dealId: true, amount: true },
+        })
+      : [];
+
+  const paidByDeal = new Map<string, number>();
+  for (const p of payments) {
+    paidByDeal.set(p.dealId, (paidByDeal.get(p.dealId) ?? 0) + Number(p.amount));
+  }
+
+  const inScopeDealIds = new Set(
+    contact.deals
+      .filter((d) => apiSession.role === "ADMIN" || d.assignedToId === apiSession.userId)
+      .map((d) => d.id)
+  );
+
+  const totalPaid = [...inScopeDealIds].reduce((sum, id) => sum + (paidByDeal.get(id) ?? 0), 0);
 
   const statusMeta = statuses.find(
     (s: Awaited<ReturnType<typeof getWorkspaceContactColumns>>[number]) => s.key === contact.status
@@ -170,23 +199,57 @@ export default async function ContactDetailPage({
               <CardTitle className="text-base">
                 Deals ({contact.deals.length})
               </CardTitle>
+              {inScopeDealIds.size > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Total paid: ${totalPaid.toLocaleString()} across {inScopeDealIds.size} deal
+                  {inScopeDealIds.size === 1 ? "" : "s"}
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               {contact.deals.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No deals linked.</p>
               ) : (
                 <ul className="divide-y text-sm">
-                  {contact.deals.map((deal) => (
-                    <li key={deal.id} className="flex items-center justify-between py-2">
-                      <span>{deal.title}</span>
-                      <span className="flex items-center gap-2">
-                        <Badge variant="outline">{deal.stage}</Badge>
-                        <span className="font-medium">
-                          ${Number(deal.value).toLocaleString()}
+                  {contact.deals.map((deal) => {
+                    const inScope = inScopeDealIds.has(deal.id);
+                    const paid = paidByDeal.get(deal.id) ?? 0;
+                    const dealValue = Number(deal.value);
+                    const paymentStatus = !inScope
+                      ? null
+                      : dealValue <= 0
+                        ? "Paid"
+                        : paid <= 0
+                          ? "Unpaid"
+                          : paid >= dealValue
+                            ? "Paid"
+                            : "Partial";
+                    return (
+                      <li key={deal.id} className="flex items-center justify-between py-2">
+                        <span>{deal.title}</span>
+                        <span className="flex items-center gap-2">
+                          <Badge variant="outline">{deal.stage}</Badge>
+                          {paymentStatus && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                paymentStatus === "Paid"
+                                  ? "border-emerald-200 text-emerald-600"
+                                  : paymentStatus === "Partial"
+                                    ? "border-amber-200 text-amber-600"
+                                    : "border-slate-200 text-slate-500"
+                              }
+                            >
+                              {paymentStatus}
+                            </Badge>
+                          )}
+                          <span className="font-medium">
+                            ${dealValue.toLocaleString()}
+                          </span>
                         </span>
-                      </span>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>
