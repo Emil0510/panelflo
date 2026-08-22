@@ -11,13 +11,23 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { label, color } = await req.json();
-  const updated = await db.pipelineColumn.update({
-    where: { id: params.id },
-    data: {
-      ...(label?.trim() ? { label: label.trim() } : {}),
-      ...(color ? { color } : {}),
-    },
+  const { label, color, isWonStage } = await req.json();
+
+  const updated = await db.$transaction(async (tx) => {
+    if (isWonStage === true) {
+      await tx.pipelineColumn.updateMany({
+        where: { workspaceId: session.user.workspaceId, id: { not: params.id } },
+        data: { isWonStage: false },
+      });
+    }
+    return tx.pipelineColumn.update({
+      where: { id: params.id },
+      data: {
+        ...(label?.trim() ? { label: label.trim() } : {}),
+        ...(color ? { color } : {}),
+        ...(typeof isWonStage === "boolean" ? { isWonStage } : {}),
+      },
+    });
   });
 
   return NextResponse.json(updated);
