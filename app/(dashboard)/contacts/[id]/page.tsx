@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
+  DollarSign,
   Package,
   Pencil,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const ACTIVITY_ICONS = {
   DEAL_MOVED: ArrowRight,
   BOT_MESSAGE: Bot,
   STOCK_MOVEMENT: Package,
+  PAYMENT_RECEIVED: DollarSign,
 } as const;
 
 export default async function ContactDetailPage({
