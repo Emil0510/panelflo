@@ -97,16 +97,26 @@ export async function PATCH(
         if (parsed.data.lineItems) {
           await tx.dealLineItem.deleteMany({ where: { dealId: existing.id } });
           for (const li of parsed.data.lineItems) {
-            const product = await tx.product.findFirst({
-              where: { id: li.productId, workspaceId: session.workspaceId, deleted: false },
-            });
-            if (!product) throw new StockError("One of the selected products no longer exists");
+            const priorPrice = priorPriceByProduct.get(li.productId);
+            let unitPriceAtSale = priorPrice;
+            if (unitPriceAtSale === undefined) {
+              // Only a NEWLY-added line item needs a live, non-deleted product
+              // lookup — an item already on the deal keeps its price snapshot
+              // even if the product was soft-deleted since, so an unrelated
+              // edit (title, assignee, etc.) doesn't get blocked by a stale
+              // product reference.
+              const product = await tx.product.findFirst({
+                where: { id: li.productId, workspaceId: session.workspaceId, deleted: false },
+              });
+              if (!product) throw new StockError("One of the selected products no longer exists");
+              unitPriceAtSale = product.unitPrice;
+            }
             await tx.dealLineItem.create({
               data: {
                 dealId: existing.id,
                 productId: li.productId,
                 quantity: li.quantity,
-                unitPriceAtSale: priorPriceByProduct.get(li.productId) ?? product.unitPrice,
+                unitPriceAtSale,
               },
             });
           }
@@ -189,9 +199,41 @@ export async function DELETE(
 
   const existing = await db.deal.findFirst({
     where: { id: params.id, workspaceId: session.workspaceId },
+    include: { lineItems: true },
   });
   if (!existing) return fail("Deal not found", 404);
 
-  await db.deal.delete({ where: { id: existing.id } });
+  const cols = await getWorkspacePipelineColumns(session.workspaceId);
+  const isWon = cols.find((c) => c.key === existing.stage)?.isWonStage ?? false;
+  const restoreItems = existing.lineItems.map((li) => ({
+    productId: li.productId,
+    quantity: li.quantity,
+  }));
+
+  const notifyPairs = await db.$transaction(
+    async (tx) => {
+      let pairs: Awaited<ReturnType<typeof applyStockForWonTransition>> = [];
+      if (isWon && restoreItems.length > 0) {
+        pairs = await applyStockForWonTransition(tx, {
+          lineItems: restoreItems,
+          entering: false,
+          dealTitle: existing.title,
+          actorUserId: session.userId,
+        });
+      }
+      await tx.deal.delete({ where: { id: existing.id } });
+      return pairs;
+    },
+    { timeout: 20000, maxWait: 5000 }
+  );
+
+  try {
+    for (const { before, after } of notifyPairs) {
+      await notifyIfLowStockCrossed(before, after);
+    }
+  } catch {
+    // Best-effort — the delete already committed successfully.
+  }
+
   return ok({ deleted: true });
 }

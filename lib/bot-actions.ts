@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { format } from "date-fns";
 
-import { getWorkspaceContactColumns } from "@/lib/columns";
+import { getWorkspaceContactColumns, getWorkspacePipelineColumns } from "@/lib/columns";
 import { db } from "@/lib/db";
 import { complete } from "@/lib/openai";
 import { adjustStock, isLowStock, StockError } from "@/lib/stock";
@@ -506,12 +506,31 @@ export async function executeBotAction(
       const rawStage = str(data, "stage");
       if (!title) return "Which deal should I move?";
       if (!rawStage) return "Which stage should it move to?";
-      const stage = normalizeStage(rawStage);
-      if (!stage) return `"${rawStage}" isn't a stage. Use: lead, contacted, proposal, won, lost.`;
+
+      const cols = await getWorkspacePipelineColumns(workspaceId);
+      const normalized = normalizeStage(rawStage);
+      const targetCol =
+        cols.find((c) => c.key === normalized) ??
+        cols.find(
+          (c) =>
+            c.key.toLowerCase() === rawStage.toLowerCase() ||
+            c.label.toLowerCase() === rawStage.toLowerCase()
+        );
+      if (!targetCol) {
+        return `"${rawStage}" isn't a stage. Use: ${cols.map((c) => c.label).join(", ")}.`;
+      }
+      const stage = targetCol.key;
 
       const deal = await findDealByTitle(workspaceId, title);
       if (!deal) return `No deal found matching "${title}".`;
-      if (deal.stage === stage) return `"${deal.title}" is already in ${stage}.`;
+      if (deal.stage === stage) return `"${deal.title}" is already in ${targetCol.label}.`;
+
+      const currentCol = cols.find((c) => c.key === deal.stage);
+      const wonBefore = currentCol?.isWonStage ?? false;
+      const wonAfter = targetCol.isWonStage;
+      if (wonBefore !== wonAfter) {
+        return `Moving "${deal.title}" ${wonAfter ? "into" : "out of"} ${targetCol.label} adjusts stock — do that from the Pipeline board on the web so the right products get updated.`;
+      }
 
       await db.deal.update({
         where: { id: deal.id },
@@ -526,9 +545,9 @@ export async function executeBotAction(
           createdById: user.id,
         },
       });
-      return stage === "WON"
-        ? `🎉 "${deal.title}" marked WON ($${Number(deal.value).toLocaleString()})!`
-        : `Moved "${deal.title}" → ${stage} ✅`;
+      return wonAfter
+        ? `🎉 "${deal.title}" marked ${targetCol.label} ($${Number(deal.value).toLocaleString()})!`
+        : `Moved "${deal.title}" → ${targetCol.label} ✅`;
     }
 
     case "UPDATE_DEAL": {

@@ -63,9 +63,9 @@ async function main() {
   // ─── Clean slate for demo data ─────────────────────────────────────────────
   await db.activity.deleteMany({ where: { workspaceId: workspace.id } });
   await db.stockMovement.deleteMany({ where: { workspaceId: workspace.id } });
-  await db.product.deleteMany({ where: { workspaceId: workspace.id } });
   await db.task.deleteMany({ where: { workspaceId: workspace.id } });
   await db.deal.deleteMany({ where: { workspaceId: workspace.id } });
+  await db.product.deleteMany({ where: { workspaceId: workspace.id } });
   await db.contact.deleteMany({ where: { workspaceId: workspace.id } });
   await db.notification.deleteMany({ where: { workspaceId: workspace.id } });
 
@@ -170,7 +170,7 @@ async function main() {
     { key: "LEAD",      label: "Lead",      color: "#64748B", order: 0, isSystem: true },
     { key: "CONTACTED", label: "Contacted", color: "#1D4ED8", order: 1, isSystem: true },
     { key: "PROPOSAL",  label: "Proposal",  color: "#B45309", order: 2, isSystem: true },
-    { key: "WON",       label: "Won",       color: "#2B5748", order: 3, isSystem: true },
+    { key: "WON",       label: "Won",       color: "#2B5748", order: 3, isSystem: true, isWonStage: true },
     { key: "LOST",      label: "Lost",      color: "#DC2626", order: 4, isSystem: true },
   ]) {
     await db.pipelineColumn.upsert({

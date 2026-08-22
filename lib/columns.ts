@@ -4,7 +4,7 @@ export const DEFAULT_PIPELINE_COLUMNS = [
   { key: "LEAD", label: "Lead", color: "#64748B", order: 0, isSystem: true },
   { key: "CONTACTED", label: "Contacted", color: "#1D4ED8", order: 1, isSystem: true },
   { key: "PROPOSAL", label: "Proposal", color: "#B45309", order: 2, isSystem: true },
-  { key: "WON", label: "Won", color: "#2B5748", order: 3, isSystem: true },
+  { key: "WON", label: "Won", color: "#2B5748", order: 3, isSystem: true, isWonStage: true },
   { key: "LOST", label: "Lost", color: "#DC2626", order: 4, isSystem: true },
 ];
 
