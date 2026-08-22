@@ -21,6 +21,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import type { ContactStatusOption } from "@/components/contacts/contacts-table";
 
 export type WorkspaceUser = { id: string; name: string | null };
 
@@ -32,7 +33,7 @@ export type ContactFormValues = {
   phone: string;
   company: string;
   notes: string;
-  status: "LEAD" | "ACTIVE" | "INACTIVE";
+  status: string;
   assignedToId: string;
 };
 
@@ -49,10 +50,12 @@ const EMPTY: ContactFormValues = {
 
 export function ContactFormSheet({
   users,
+  statuses,
   initial,
   trigger,
 }: {
   users: WorkspaceUser[];
+  statuses: ContactStatusOption[];
   initial?: ContactFormValues;
   trigger: React.ReactNode;
 }) {
@@ -149,15 +152,17 @@ export function ContactFormSheet({
               <Label>Status</Label>
               <Select
                 value={values.status}
-                onValueChange={(v) => set("status", v as ContactFormValues["status"])}
+                onValueChange={(v) => set("status", v)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="LEAD">Lead</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  {statuses.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -10,7 +10,7 @@ const contactSchema = z.object({
   phone: z.string().max(30).optional().nullable(),
   company: z.string().max(150).optional().nullable(),
   notes: z.string().max(5000).optional().nullable(),
-  status: z.enum(["LEAD", "ACTIVE", "INACTIVE"]).optional(),
+  status: z.string().min(1).max(50).optional(),
   assignedToId: z.string().optional().nullable(),
 });
 
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const contacts = await db.contact.findMany({
     where: {
       workspaceId: session.workspaceId,
-      ...(status ? { status: status as "LEAD" | "ACTIVE" | "INACTIVE" } : {}),
+      ...(status ? { status } : {}),
       ...(assignedToId ? { assignedToId } : {}),
       ...(search
         ? {

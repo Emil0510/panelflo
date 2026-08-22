@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { format } from "date-fns";
 
+import { getWorkspaceContactColumns } from "@/lib/columns";
 import { db } from "@/lib/db";
 import { complete } from "@/lib/openai";
 import { adjustStock, isLowStock, StockError } from "@/lib/stock";
@@ -40,7 +41,6 @@ export const ACTIONS = [
 ] as const;
 
 const DEAL_STAGES = ["LEAD", "CONTACTED", "PROPOSAL", "WON", "LOST"] as const;
-const CONTACT_STATUSES = ["LEAD", "ACTIVE", "INACTIVE"] as const;
 
 export type BotAction = (typeof ACTIONS)[number];
 
@@ -214,10 +214,13 @@ export async function executeBotAction(
       const changes: Record<string, unknown> = {};
       const rawStatus = str(data, "status");
       if (rawStatus) {
-        const status = rawStatus.toUpperCase();
-        if ((CONTACT_STATUSES as readonly string[]).includes(status)) {
-          changes.status = status;
-        }
+        const statusCols = await getWorkspaceContactColumns(workspaceId);
+        const matchedStatus = statusCols.find(
+          (c) =>
+            c.key.toLowerCase() === rawStatus.toLowerCase() ||
+            c.label.toLowerCase() === rawStatus.toLowerCase()
+        );
+        if (matchedStatus) changes.status = matchedStatus.key;
       }
       const email = str(data, "email");
       const phone = str(data, "phone");
@@ -246,14 +249,21 @@ export async function executeBotAction(
     }
 
     case "LIST_CONTACTS": {
-      const rawStatus = str(data, "status", "filter")?.toUpperCase();
+      const rawStatus = str(data, "status", "filter");
+      let matchedStatusKey: string | undefined;
+      if (rawStatus) {
+        const statusCols = await getWorkspaceContactColumns(workspaceId);
+        matchedStatusKey = statusCols.find(
+          (c) =>
+            c.key.toLowerCase() === rawStatus.toLowerCase() ||
+            c.label.toLowerCase() === rawStatus.toLowerCase()
+        )?.key;
+      }
       const search = str(data, "search", "query");
       const contacts = await db.contact.findMany({
         where: {
           workspaceId,
-          ...(rawStatus && (CONTACT_STATUSES as readonly string[]).includes(rawStatus)
-            ? { status: rawStatus as never }
-            : {}),
+          ...(matchedStatusKey ? { status: matchedStatusKey } : {}),
           ...(search
             ? {
                 OR: [

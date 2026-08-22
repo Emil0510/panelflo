@@ -10,7 +10,7 @@ const updateSchema = z.object({
   phone: z.string().max(30).optional().nullable(),
   company: z.string().max(150).optional().nullable(),
   notes: z.string().max(5000).optional().nullable(),
-  status: z.enum(["LEAD", "ACTIVE", "INACTIVE"]).optional(),
+  status: z.string().min(1).max(50).optional(),
   assignedToId: z.string().optional().nullable(),
 });
 

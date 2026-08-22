@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { ContactFormSheet, type WorkspaceUser } from "@/components/contacts/contact-form";
 import { CsvImportDialog } from "@/components/contacts/csv-import-dialog";
+import { ManageStatusesPopover } from "@/components/contacts/manage-statuses-popover";
 import { EmptyState } from "@/components/empty-state";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,14 +27,15 @@ export type ContactRow = {
   email: string | null;
   phone: string | null;
   company: string | null;
-  status: "LEAD" | "ACTIVE" | "INACTIVE";
+  status: string;
   assignedTo: { id: string; name: string | null } | null;
 };
 
-const STATUS_STYLES: Record<ContactRow["status"], string> = {
-  LEAD: "bg-amber-100 text-amber-800",
-  ACTIVE: "bg-primary-light text-primary-dark",
-  INACTIVE: "bg-slate-100 text-slate-600",
+export type ContactStatusOption = {
+  id: string;
+  key: string;
+  label: string;
+  color: string;
 };
 
 type SortKey = "name" | "company" | "status";
@@ -41,10 +43,13 @@ type SortKey = "name" | "company" | "status";
 export function ContactsTable({
   contacts,
   users,
+  statuses,
 }: {
   contacts: ContactRow[];
   users: WorkspaceUser[];
+  statuses: ContactStatusOption[];
 }) {
+  const statusByKey = new Map(statuses.map((s) => [s.key, s]));
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -107,11 +112,14 @@ export function ContactsTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="LEAD">Lead</SelectItem>
-            <SelectItem value="ACTIVE">Active</SelectItem>
-            <SelectItem value="INACTIVE">Inactive</SelectItem>
+            {statuses.map((s) => (
+              <SelectItem key={s.key} value={s.key}>
+                {s.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <ManageStatusesPopover statuses={statuses} />
         <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
           <SelectTrigger className="h-9 w-40">
             <SelectValue />
@@ -129,6 +137,7 @@ export function ContactsTable({
           <CsvImportDialog />
           <ContactFormSheet
             users={users}
+            statuses={statuses}
             trigger={
               <Button size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -202,8 +211,15 @@ export function ContactsTable({
                   <td className="px-3 py-3 text-muted-foreground">{c.email ?? "—"}</td>
                   <td className="px-3 py-3 text-muted-foreground">{c.phone ?? "—"}</td>
                   <td className="px-3 py-3">
-                    <Badge className={STATUS_STYLES[c.status]} variant="outline">
-                      {c.status}
+                    <Badge
+                      variant="outline"
+                      style={{
+                        backgroundColor: `${statusByKey.get(c.status)?.color ?? "#64748B"}1a`,
+                        color: statusByKey.get(c.status)?.color ?? "#64748B",
+                        borderColor: "transparent",
+                      }}
+                    >
+                      {statusByKey.get(c.status)?.label ?? c.status}
                     </Badge>
                   </td>
                   <td className="px-3 py-3">

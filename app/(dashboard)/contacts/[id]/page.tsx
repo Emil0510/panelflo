@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { getWorkspaceContactColumns } from "@/lib/columns";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +33,6 @@ const ACTIVITY_ICONS = {
   STOCK_MOVEMENT: Package,
 } as const;
 
-const STATUS_STYLES = {
-  LEAD: "bg-amber-100 text-amber-800",
-  ACTIVE: "bg-primary-light text-primary-dark",
-  INACTIVE: "bg-slate-100 text-slate-600",
-} as const;
-
 export default async function ContactDetailPage({
   params,
 }: {
@@ -46,7 +41,7 @@ export default async function ContactDetailPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [contact, users] = await Promise.all([
+  const [contact, users, statuses] = await Promise.all([
     db.contact.findFirst({
       where: { id: params.id, workspaceId: session.user.workspaceId },
       include: {
@@ -67,8 +62,11 @@ export default async function ContactDetailPage({
       where: { workspaceId: session.user.workspaceId },
       select: { id: true, name: true },
     }),
+    getWorkspaceContactColumns(session.user.workspaceId),
   ]);
   if (!contact) notFound();
+
+  const statusMeta = statuses.find((s) => s.key === contact.status);
 
   return (
     <div className="space-y-6">
@@ -86,8 +84,15 @@ export default async function ContactDetailPage({
             <p className="text-sm text-muted-foreground">{contact.company}</p>
           )}
         </div>
-        <Badge className={STATUS_STYLES[contact.status]} variant="outline">
-          {contact.status}
+        <Badge
+          variant="outline"
+          style={{
+            backgroundColor: `${statusMeta?.color ?? "#64748B"}1a`,
+            color: statusMeta?.color ?? "#64748B",
+            borderColor: "transparent",
+          }}
+        >
+          {statusMeta?.label ?? contact.status}
         </Badge>
         {contact.assignedTo && (
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -107,6 +112,7 @@ export default async function ContactDetailPage({
           <QuickAddTask contactId={contact.id} users={users} />
           <ContactFormSheet
             users={users}
+            statuses={statuses}
             initial={{
               id: contact.id,
               firstName: contact.firstName,

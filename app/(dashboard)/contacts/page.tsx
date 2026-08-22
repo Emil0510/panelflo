@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { ContactsTable } from "@/components/contacts/contacts-table";
 import { auth } from "@/lib/auth";
+import { getWorkspaceContactColumns } from "@/lib/columns";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export default async function ContactsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [contacts, users] = await Promise.all([
+  const [contacts, users, statuses] = await Promise.all([
     db.contact.findMany({
       where: { workspaceId: session.user.workspaceId },
       include: { assignedTo: { select: { id: true, name: true } } },
@@ -20,6 +21,7 @@ export default async function ContactsPage() {
       where: { workspaceId: session.user.workspaceId },
       select: { id: true, name: true },
     }),
+    getWorkspaceContactColumns(session.user.workspaceId),
   ]);
 
   return (
@@ -36,6 +38,7 @@ export default async function ContactsPage() {
         assignedTo: c.assignedTo,
       }))}
       users={users}
+      statuses={statuses}
     />
     </div>
   );
