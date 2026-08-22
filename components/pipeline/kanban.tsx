@@ -30,6 +30,7 @@ export type KanbanColumn = {
   color: string;
   order: number;
   isSystem: boolean;
+  isWonStage: boolean;
 };
 
 export type DealCard = {
@@ -116,19 +117,20 @@ function EditColumnPopover({
   col: KanbanColumn;
   dealsCount: number;
   totalColumns: number;
-  onSave: (label: string, color: string) => Promise<void>;
+  onSave: (label: string, color: string, isWonStage: boolean) => Promise<void>;
   onDelete: () => Promise<void>;
   onClose: () => void;
 }) {
   const [label, setLabel] = useState(col.label);
   const [color, setColor] = useState(col.color);
+  const [isWonStage, setIsWonStage] = useState(col.isWonStage);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function save() {
     if (!label.trim()) { setError("Name required"); return; }
     setSaving(true);
-    await onSave(label.trim(), color);
+    await onSave(label.trim(), color, isWonStage);
     setSaving(false);
     onClose();
   }
@@ -167,6 +169,15 @@ function EditColumnPopover({
             className="h-6 w-10 cursor-pointer rounded border"
           />
         </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={isWonStage}
+            onChange={(e) => setIsWonStage(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border"
+          />
+          Counts as sold (decrements stock)
+        </label>
         {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="flex gap-1.5">
           <Button size="sm" className="h-7 flex-1 text-xs" onClick={save} disabled={saving}>
@@ -205,7 +216,7 @@ function StageColumn({
   onToggle?: () => void;
   onAdd: () => void;
   onCardClick: (deal: DealCard) => void;
-  onColSave: (id: string, label: string, color: string) => Promise<void>;
+  onColSave: (id: string, label: string, color: string, isWonStage: boolean) => Promise<void>;
   onColDelete: (id: string) => Promise<void>;
   totalColumns: number;
 }) {
@@ -250,7 +261,7 @@ function StageColumn({
           col={col}
           dealsCount={deals.length}
           totalColumns={totalColumns}
-          onSave={(label, color) => onColSave(col.id, label, color)}
+          onSave={(label, color, isWonStage) => onColSave(col.id, label, color, isWonStage)}
           onDelete={() => onColDelete(col.id)}
           onClose={() => setEditOpen(false)}
         />
@@ -431,14 +442,19 @@ export function PipelineKanban({
     setSheetOpen(true);
   }
 
-  async function handleColSave(id: string, label: string, color: string) {
+  async function handleColSave(id: string, label: string, color: string, isWonStage: boolean) {
     const res = await fetch(`/api/pipeline/columns/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label, color }),
+      body: JSON.stringify({ label, color, isWonStage }),
     });
     if (res.ok) {
-      setColumns((prev) => prev.map((c) => (c.id === id ? { ...c, label, color } : c)));
+      setColumns((prev) =>
+        prev.map((c) => ({
+          ...c,
+          ...(c.id === id ? { label, color, isWonStage } : isWonStage ? { isWonStage: false } : {}),
+        }))
+      );
     }
   }
 
