@@ -5,6 +5,7 @@ import {
   CheckSquare,
   Contact,
   CreditCard,
+  DollarSign,
   Kanban,
   LayoutDashboard,
   Package,
@@ -25,6 +26,7 @@ const NAV_SECTIONS = [
       { href: "/pipeline",  label: "Pipeline",  icon: Kanban },
       { href: "/tasks",     label: "Tasks",     icon: CheckSquare },
       { href: "/stock",     label: "Stock",     icon: Package },
+      { href: "/finance",   label: "Finance",   icon: DollarSign },
     ],
   },
   {
