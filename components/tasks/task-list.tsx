@@ -429,7 +429,7 @@ function TaskItem({ task, onOpen, columns }: { task: TaskRow; onOpen: () => void
           <AvatarFallback className="bg-primary-light text-[10px] text-primary">
             {(task.assignedTo.name ?? "?")
               .split(" ")
-              .map((n) => n[0])
+              .map((n: string) => n[0])
               .slice(0, 2)
               .join("")}
           </AvatarFallback>

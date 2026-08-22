@@ -102,7 +102,7 @@ export default async function ContactDetailPage({
               <AvatarFallback className="bg-primary-light text-[10px] text-primary">
                 {(contact.assignedTo.name ?? "?")
                   .split(" ")
-                  .map((n) => n[0])
+                  .map((n: string) => n[0])
                   .slice(0, 2)
                   .join("")}
               </AvatarFallback>

@@ -256,7 +256,7 @@ export function TaskDetailSheet({
                       {assignedUser ? (
                         <span className="flex items-center gap-2">
                           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
-                            {(assignedUser.name ?? "?").split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                            {(assignedUser.name ?? "?").split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
                           </span>
                           {assignedUser.name}
                         </span>

@@ -47,7 +47,7 @@ type Member = {
 
 function initials(name: string | null | undefined) {
   if (!name) return "?";
-  return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  return name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
 function BotStatus({ connected }: { connected: boolean }) {
