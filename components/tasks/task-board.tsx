@@ -43,7 +43,7 @@ function TaskCardView({ task, dragging }: { task: TaskRow; dragging?: boolean })
   return (
     <div
       className={cn(
-        "space-y-1.5 rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md",
+        "space-y-2 rounded-lg border bg-card p-3.5 shadow-sm transition-shadow hover:shadow-md",
         dragging && "opacity-90 shadow-lg ring-2 ring-primary/40",
         overdue && "border-l-4 border-l-red-500"
       )}
@@ -227,27 +227,29 @@ function StatusColumn({
       )}
     >
       <div className="flex items-center gap-2 px-1.5 py-1.5">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: col.color }} />
         <span className="text-sm font-semibold text-foreground">{col.label}</span>
         <span className="text-xs text-muted-foreground">({tasks.length})</span>
-        <button
-          onClick={() => setEditOpen((v) => !v)}
-          className="ml-auto rounded p-0.5 text-muted-foreground hover:text-foreground"
-          title="Edit column"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
+        <div className="relative ml-auto">
+          <button
+            onClick={() => setEditOpen((v) => !v)}
+            className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+            title="Edit column"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          {editOpen && (
+            <EditColumnPopover
+              col={col}
+              tasksCount={tasks.length}
+              totalColumns={totalColumns}
+              onSave={(label, color) => onColSave(col.id, label, color)}
+              onDelete={() => onColDelete(col.id)}
+              onClose={() => setEditOpen(false)}
+            />
+          )}
+        </div>
       </div>
-
-      {editOpen && (
-        <EditColumnPopover
-          col={col}
-          tasksCount={tasks.length}
-          totalColumns={totalColumns}
-          onSave={(label, color) => onColSave(col.id, label, color)}
-          onDelete={() => onColDelete(col.id)}
-          onClose={() => setEditOpen(false)}
-        />
-      )}
 
       <div className="flex flex-1 flex-col gap-2 p-1">
         {tasks.map((task) => (

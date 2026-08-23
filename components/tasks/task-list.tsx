@@ -682,6 +682,13 @@ export function TaskList({
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xl font-semibold">Tasks</h2>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {viewTasks.length}
+        </span>
+      </div>
+
       {/* Top toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <Tabs value={view} onValueChange={(v) => setView(v as "mine" | "all")}>
