@@ -266,7 +266,7 @@ function StageColumn({
       ref={setNodeRef}
       style={{ borderTopColor: col.color }}
       className={cn(
-        "relative flex w-64 shrink-0 flex-col rounded-xl border-t-[3px] bg-muted p-2 transition-colors",
+        "group relative flex w-64 shrink-0 flex-col rounded-xl border-t-[3px] bg-muted p-2 transition-colors",
         isOver && "bg-primary/10"
       )}
     >
@@ -282,28 +282,32 @@ function StageColumn({
         <span className="ml-auto text-xs font-medium text-muted-foreground">
           ${total.toLocaleString()}
         </span>
-        <button
-          onClick={() => setEditOpen((v) => !v)}
-          className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-          title="Edit column"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setEditOpen((v) => !v)}
+            className={cn(
+              "rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100",
+              editOpen && "opacity-100"
+            )}
+            title="Edit column"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          {editOpen && (
+            <EditColumnPopover
+              col={col}
+              dealsCount={deals.length}
+              totalColumns={totalColumns}
+              onSave={(label, color, isWonStage) => onColSave(col.id, label, color, isWonStage)}
+              onDelete={() => onColDelete(col.id)}
+              onClose={() => setEditOpen(false)}
+            />
+          )}
+        </div>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onAdd}>
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
-
-      {editOpen && (
-        <EditColumnPopover
-          col={col}
-          dealsCount={deals.length}
-          totalColumns={totalColumns}
-          onSave={(label, color, isWonStage) => onColSave(col.id, label, color, isWonStage)}
-          onDelete={() => onColDelete(col.id)}
-          onClose={() => setEditOpen(false)}
-        />
-      )}
 
       {!collapsed && (
         <div className="flex flex-1 flex-col gap-2 p-1">
