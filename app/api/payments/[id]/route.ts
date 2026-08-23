@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { fail, isErrorResponse, ok, requireApiSession } from "@/lib/api";
@@ -5,7 +6,7 @@ import { db } from "@/lib/db";
 import { assertNoOverpayment, PaymentError, scopePaymentsToSession } from "@/lib/payments";
 
 const updateSchema = z.object({
-  amount: z.number().positive().optional(),
+  amount: z.number().positive().max(9999999999.99).optional(),
   method: z.enum(["CASH", "BANK_TRANSFER", "CARD", "OTHER"]).optional(),
   paidAt: z.string().optional(),
   notes: z.string().max(500).optional().nullable(),
@@ -55,14 +56,14 @@ export async function PATCH(
             workspaceId: session.workspaceId,
             contactId: existing.deal.contactId,
             type: "PAYMENT_RECEIVED",
-            content: `Payment of $${Number(updated.amount).toLocaleString()} updated on deal "${existing.deal.title}"`,
+            content: `Payment updated on deal "${existing.deal.title}"`,
             createdById: session.userId,
           },
         });
 
         return updated;
       },
-      { timeout: 20000, maxWait: 5000 }
+      { timeout: 20000, maxWait: 5000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
 
     return ok(payment);
@@ -85,18 +86,21 @@ export async function DELETE(
   });
   if (!existing) return fail("Payment not found", 404);
 
-  await db.$transaction(async (tx) => {
-    await tx.payment.delete({ where: { id: existing.id } });
-    await tx.activity.create({
-      data: {
-        workspaceId: session.workspaceId,
-        contactId: existing.deal.contactId,
-        type: "PAYMENT_RECEIVED",
-        content: `Payment of $${Number(existing.amount).toLocaleString()} removed from deal "${existing.deal.title}"`,
-        createdById: session.userId,
-      },
-    });
-  });
+  await db.$transaction(
+    async (tx) => {
+      await tx.payment.delete({ where: { id: existing.id } });
+      await tx.activity.create({
+        data: {
+          workspaceId: session.workspaceId,
+          contactId: existing.deal.contactId,
+          type: "PAYMENT_RECEIVED",
+          content: `Payment removed from deal "${existing.deal.title}"`,
+          createdById: session.userId,
+        },
+      });
+    },
+    { timeout: 20000, maxWait: 5000 }
+  );
 
   return ok({ deleted: true });
 }

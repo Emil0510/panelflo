@@ -16,11 +16,16 @@ export function scopeDealsToSession(session: ApiSession) {
     : { workspaceId: session.workspaceId, assignedToId: session.userId };
 }
 
+export function canAccessDeal(session: ApiSession, deal: { assignedToId: string | null }) {
+  return session.role === "ADMIN" || deal.assignedToId === session.userId;
+}
+
 /**
  * Must run inside the same transaction as the Payment create/update it
- * guards — reading the current sum and writing the new row have to be
- * atomic, or two concurrent payments could both pass validation against
- * a stale total.
+ * guards, AND that transaction must use Serializable isolation (or
+ * equivalent row locking) — under the default READ COMMITTED isolation,
+ * two concurrent payments can each read the sum before the other's write
+ * commits, both pass validation, and both commit, overpaying the deal.
  */
 export async function assertNoOverpayment(
   tx: Prisma.TransactionClient,
@@ -38,8 +43,10 @@ export async function assertNoOverpayment(
     },
     _sum: { amount: true },
   });
-  const alreadyPaid = Number(existingTotal._sum.amount ?? 0);
-  if (alreadyPaid + opts.amount > Number(opts.dealValue)) {
+  const alreadyPaid = new Prisma.Decimal(existingTotal._sum.amount ?? 0);
+  const newTotal = alreadyPaid.plus(opts.amount);
+  const dealValue = new Prisma.Decimal(opts.dealValue);
+  if (newTotal.greaterThan(dealValue)) {
     throw new PaymentError("Payment would exceed the deal's remaining balance");
   }
 }

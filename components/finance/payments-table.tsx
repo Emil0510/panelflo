@@ -46,7 +46,7 @@ export function PaymentsTable({
     if (!confirm(`Delete this $${p.amount.toLocaleString()} payment on "${p.deal.title}"?`)) return;
     const res = await fetch(`/api/payments/${p.id}`, { method: "DELETE" });
     if (!res.ok) {
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       toast.error(json.error ?? "Delete failed");
       return;
     }
@@ -94,7 +94,7 @@ export function PaymentsTable({
                 <Badge variant="outline">{METHOD_LABELS[p.method]}</Badge>
               </td>
               <td className="px-3 py-3 text-muted-foreground">
-                {new Date(p.paidAt).toLocaleDateString()}
+                {p.paidAt.slice(0, 10)}
               </td>
               {showAssignee && (
                 <td className="px-3 py-3 text-muted-foreground">

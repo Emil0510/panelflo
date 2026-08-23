@@ -96,14 +96,14 @@ export function PaymentFormSheet({
           amount: amountNum,
           method: values.method,
           paidAt: values.paidAt,
-          notes: values.notes || undefined,
+          notes: values.notes || (isEdit ? null : undefined),
         }),
       }
     );
     setSaving(false);
 
     if (!res.ok) {
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       setError(json.error ?? "Failed to save payment");
       return;
     }

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { fail, isErrorResponse, ok, requireApiSession } from "@/lib/api";
@@ -6,7 +7,7 @@ import { assertNoOverpayment, PaymentError, scopeDealsToSession, scopePaymentsTo
 
 const paymentSchema = z.object({
   dealId: z.string(),
-  amount: z.number().positive(),
+  amount: z.number().positive().max(9999999999.99),
   method: z.enum(["CASH", "BANK_TRANSFER", "CARD", "OTHER"]),
   paidAt: z.string().optional(),
   notes: z.string().max(500).optional(),
@@ -80,14 +81,14 @@ export async function POST(req: Request) {
             workspaceId: session.workspaceId,
             contactId: deal.contactId,
             type: "PAYMENT_RECEIVED",
-            content: `Payment of $${parsed.data.amount.toLocaleString()} logged on deal "${deal.title}"`,
+            content: `Payment logged on deal "${deal.title}"`,
             createdById: session.userId,
           },
         });
 
         return created;
       },
-      { timeout: 20000, maxWait: 5000 }
+      { timeout: 20000, maxWait: 5000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
 
     return ok(payment);

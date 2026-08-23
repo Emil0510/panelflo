@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { getWorkspaceContactColumns } from "@/lib/columns";
 import { db } from "@/lib/db";
-import { scopePaymentsToSession } from "@/lib/payments";
+import { canAccessDeal, scopePaymentsToSession } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -90,9 +90,7 @@ export default async function ContactDetailPage({
   }
 
   const inScopeDealIds = new Set(
-    contact.deals
-      .filter((d) => apiSession.role === "ADMIN" || d.assignedToId === apiSession.userId)
-      .map((d) => d.id)
+    contact.deals.filter((d) => canAccessDeal(apiSession, d)).map((d) => d.id)
   );
 
   const totalPaid = [...inScopeDealIds].reduce((sum, id) => sum + (paidByDeal.get(id) ?? 0), 0);
