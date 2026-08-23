@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { differenceInDays } from "date-fns";
-import { ChevronDown, ChevronRight, Inbox, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Inbox, Package, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
@@ -42,7 +42,16 @@ export type DealCard = {
   contact: { id: string; name: string; company: string | null } | null;
   assignedTo: { id: string; name: string | null } | null;
   lineItems: { productId: string; quantity: number }[];
+  paid: number | null;
 };
+
+function paymentStatus(value: number, paid: number | null) {
+  if (paid === null) return null;
+  if (value <= 0) return "Paid" as const;
+  if (paid <= 0) return "Unpaid" as const;
+  if (paid >= value) return "Paid" as const;
+  return "Partial" as const;
+}
 
 function DealCardView({
   deal,
@@ -60,21 +69,48 @@ function DealCardView({
       : daysInStage > 7
         ? "text-amber-600"
         : "text-muted-foreground";
+  const status = paymentStatus(deal.value, deal.paid);
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "cursor-grab space-y-1.5 rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md",
+        "cursor-grab space-y-2 rounded-lg border bg-card p-3.5 shadow-sm transition-shadow hover:shadow-md",
         dragging && "opacity-90 shadow-lg ring-2 ring-primary/40"
       )}
     >
-      <p className="text-sm font-medium leading-tight">
-        {deal.contact?.company ?? deal.title}
-      </p>
-      {deal.contact && (
-        <p className="text-xs text-muted-foreground">{deal.contact.name}</p>
+      <div>
+        <p className="text-sm font-medium leading-tight">
+          {deal.contact?.company ?? deal.title}
+        </p>
+        {deal.contact && (
+          <p className="text-xs text-muted-foreground">{deal.contact.name}</p>
+        )}
+      </div>
+
+      {(status || deal.lineItems.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {status && (
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                status === "Paid" && "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+                status === "Partial" && "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+                status === "Unpaid" && "bg-muted text-muted-foreground"
+              )}
+            >
+              {status}
+            </span>
+          )}
+          {deal.lineItems.length > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Package className="h-3 w-3" />
+              {deal.lineItems.reduce((sum, li) => sum + li.quantity, 0)}
+            </span>
+          )}
+        </div>
       )}
+
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-primary-dark">
           ${deal.value.toLocaleString()}
@@ -240,6 +276,7 @@ function StageColumn({
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         )}
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: col.color }} />
         <span className="text-sm font-semibold text-foreground">{col.label}</span>
         <span className="text-xs text-muted-foreground">({deals.length})</span>
         <span className="ml-auto text-xs font-medium text-muted-foreground">
