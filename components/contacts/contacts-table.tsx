@@ -40,6 +40,31 @@ export type ContactStatusOption = {
 
 type SortKey = "name" | "company" | "status";
 
+const AVATAR_PALETTE = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300",
+];
+
+function avatarClass(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export function ContactsTable({
   contacts,
   users,
@@ -99,6 +124,28 @@ export function ContactsTable({
 
   return (
     <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">Contacts</h2>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            {contacts.length}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <CsvImportDialog />
+          <ContactFormSheet
+            users={users}
+            statuses={statuses}
+            trigger={
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Contact
+              </Button>
+            }
+          />
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <Input
           placeholder="Search name, email, company…"
@@ -133,45 +180,32 @@ export function ContactsTable({
             ))}
           </SelectContent>
         </Select>
-        <div className="ml-auto flex gap-2">
-          <CsvImportDialog />
-          <ContactFormSheet
-            users={users}
-            statuses={statuses}
-            trigger={
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Contact
-              </Button>
-            }
-          />
-        </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border bg-card">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 border-b bg-card">
             <tr>
-              <th className="w-10 px-3 py-3 text-left text-xs font-medium text-muted-foreground">#</th>
-              {(
-                [
-                  ["name", "Name"],
-                  ["company", "Company"],
-                ] as [SortKey, string][]
-              ).map(([key, label]) => (
-                <th key={key} className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">
-                  <button
-                    className="flex items-center gap-1 hover:text-foreground"
-                    onClick={() => toggleSort(key)}
-                  >
-                    {label}
-                    <ArrowUpDown className="h-3 w-3" />
-                  </button>
-                </th>
-              ))}
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Email</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Phone</th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                <button
+                  className="flex items-center gap-1 hover:text-foreground"
+                  onClick={() => toggleSort("name")}
+                >
+                  Contact
+                  <ArrowUpDown className="h-3 w-3" />
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                <button
+                  className="flex items-center gap-1 hover:text-foreground"
+                  onClick={() => toggleSort("company")}
+                >
+                  Company
+                  <ArrowUpDown className="h-3 w-3" />
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Phone</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
                 <button
                   className="flex items-center gap-1 hover:text-foreground"
                   onClick={() => toggleSort("status")}
@@ -180,13 +214,13 @@ export function ContactsTable({
                   <ArrowUpDown className="h-3 w-3" />
                 </button>
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Assigned To</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Assigned To</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-0">
+                <td colSpan={5} className="p-0">
                   <EmptyState
                     icon={Users}
                     title={contacts.length === 0 ? "No contacts yet" : "No contacts match your filters"}
@@ -199,49 +233,58 @@ export function ContactsTable({
                 </td>
               </tr>
             ) : (
-              filtered.map((c, i) => (
-                <tr
-                  key={c.id}
-                  className="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/40"
-                  onClick={() => router.push(`/contacts/${c.id}`)}
-                >
-                  <td className="px-3 py-3 text-xs text-muted-foreground">{i + 1}</td>
-                  <td className="px-3 py-3 font-medium">{c.firstName} {c.lastName ?? ""}</td>
-                  <td className="px-3 py-3 text-muted-foreground">{c.company ?? "—"}</td>
-                  <td className="px-3 py-3 text-muted-foreground">{c.email ?? "—"}</td>
-                  <td className="px-3 py-3 text-muted-foreground">{c.phone ?? "—"}</td>
-                  <td className="px-3 py-3">
-                    <Badge
-                      variant="outline"
-                      style={{
-                        backgroundColor: `${statusByKey.get(c.status)?.color ?? "#64748B"}1a`,
-                        color: statusByKey.get(c.status)?.color ?? "#64748B",
-                        borderColor: "transparent",
-                      }}
-                    >
-                      {statusByKey.get(c.status)?.label ?? c.status}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-3">
-                    {c.assignedTo ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="bg-primary-light text-[10px] text-primary">
-                            {(c.assignedTo.name ?? "?")
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .slice(0, 2)
-                              .join("")}
+              filtered.map((c) => {
+                const fullName = `${c.firstName} ${c.lastName ?? ""}`.trim();
+                return (
+                  <tr
+                    key={c.id}
+                    className="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/40"
+                    onClick={() => router.push(`/contacts/${c.id}`)}
+                  >
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarFallback className={`text-xs font-semibold ${avatarClass(c.id)}`}>
+                            {initials(fullName) || "?"}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{c.assignedTo.name}</span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium leading-tight">{fullName || "Unnamed"}</p>
+                          <p className="truncate text-xs text-muted-foreground">{c.email ?? "No email"}</p>
+                        </div>
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-4 py-3.5 text-muted-foreground">{c.company ?? "—"}</td>
+                    <td className="px-4 py-3.5 text-muted-foreground">{c.phone ?? "—"}</td>
+                    <td className="px-4 py-3.5">
+                      <Badge
+                        variant="outline"
+                        style={{
+                          backgroundColor: `${statusByKey.get(c.status)?.color ?? "#64748B"}1a`,
+                          color: statusByKey.get(c.status)?.color ?? "#64748B",
+                          borderColor: "transparent",
+                        }}
+                      >
+                        {statusByKey.get(c.status)?.label ?? c.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {c.assignedTo ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="bg-primary-light text-[10px] text-primary">
+                              {initials(c.assignedTo.name ?? "?") || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{c.assignedTo.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
