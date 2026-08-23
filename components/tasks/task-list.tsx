@@ -681,8 +681,8 @@ export function TaskList({
   const hasFilters = filters.length > 0 || search.trim().length > 0;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="flex h-full flex-col gap-3">
+      <div className="flex shrink-0 items-center gap-2">
         <h2 className="text-xl font-semibold">Tasks</h2>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {viewTasks.length}
@@ -690,7 +690,7 @@ export function TaskList({
       </div>
 
       {/* Top toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Tabs value={view} onValueChange={(v) => setView(v as "mine" | "all")}>
           <TabsList>
             <TabsTrigger value="mine">My Tasks</TabsTrigger>
@@ -715,7 +715,7 @@ export function TaskList({
       </div>
 
       {/* Search + filter bar */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -760,9 +760,11 @@ export function TaskList({
       />
 
       {mode === "kanban" ? (
-        <TaskBoard tasks={visible} columns={columns} onCardClick={setSelected} />
+        <div className="min-h-0 flex-1">
+          <TaskBoard tasks={visible} columns={columns} onCardClick={setSelected} />
+        </div>
       ) : view === "mine" ? (
-        <div className="space-y-6">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
           {GROUP_ORDER.map((group) => {
             const items = grouped.get(group)!;
             if (items.length === 0) return null;
@@ -791,7 +793,7 @@ export function TaskList({
           )}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
           {byAssignee &&
             [...byAssignee.entries()].map(([key, { name, tasks: items }]) => (
               <div key={key} className="space-y-2">

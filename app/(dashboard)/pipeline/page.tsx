@@ -65,7 +65,7 @@ export default async function PipelinePage() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <h2 className="text-xl font-semibold">Pipeline</h2>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {openDeals.length} open · ${openValue.toLocaleString()}

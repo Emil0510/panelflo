@@ -266,7 +266,7 @@ function StageColumn({
       ref={setNodeRef}
       style={{ borderTopColor: col.color }}
       className={cn(
-        "group relative flex w-64 shrink-0 flex-col rounded-xl border-t-[3px] bg-muted p-2 transition-colors",
+        "group relative flex h-full w-64 shrink-0 flex-col rounded-xl border-t-[3px] bg-muted p-2 transition-colors",
         isOver && "bg-primary/10"
       )}
     >
@@ -310,7 +310,7 @@ function StageColumn({
       </div>
 
       {!collapsed && (
-        <div className="flex flex-1 flex-col gap-2 p-1">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-1">
           {deals.map((deal) => (
             <DraggableDeal key={deal.id} deal={deal} onClick={() => onCardClick(deal)} />
           ))}
@@ -529,7 +529,7 @@ export function PipelineKanban({
   return (
     <>
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div className="group flex gap-3 overflow-x-auto pb-4">
+        <div className="group flex min-h-0 flex-1 gap-3 overflow-x-auto pb-4">
           {columns.map((col) => (
             <StageColumn
               key={col.key}

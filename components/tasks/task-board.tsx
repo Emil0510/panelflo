@@ -222,7 +222,7 @@ function StatusColumn({
       ref={setNodeRef}
       style={{ borderTopColor: col.color }}
       className={cn(
-        "relative flex w-72 shrink-0 flex-col rounded-xl border-t-[3px] bg-muted p-2 transition-colors",
+        "relative flex h-full w-72 shrink-0 flex-col rounded-xl border-t-[3px] bg-muted p-2 transition-colors",
         isOver && "bg-primary/10"
       )}
     >
@@ -251,7 +251,7 @@ function StatusColumn({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-1">
         {tasks.map((task) => (
           <DraggableTask key={task.id} task={task} onClick={() => onCardClick(task)} />
         ))}
@@ -424,7 +424,7 @@ export function TaskBoard({
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className="flex gap-3 overflow-x-auto pb-4">
+      <div className="flex h-full gap-3 overflow-x-auto pb-4">
         {columns.map((col) => (
           <StatusColumn
             key={col.key}
