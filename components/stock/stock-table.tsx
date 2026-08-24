@@ -47,6 +47,21 @@ function isLow(p: ProductRow) {
 
 type SortKey = "name" | "sku" | "quantity" | "unitPrice";
 
+const ICON_PALETTE = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300",
+];
+
+function iconClass(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return ICON_PALETTE[hash % ICON_PALETTE.length];
+}
+
 export function StockTable({ products }: { products: ProductRow[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -120,9 +135,25 @@ export function StockTable({ products }: { products: ProductRow[] }) {
   }
 
   const lowCount = products.filter(isLow).length;
+  const totalValue = products.reduce((sum, p) => sum + p.unitPrice * p.quantity, 0);
 
   return (
     <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-xl font-semibold">Stock</h2>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {products.length}
+        </span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          ${Math.round(totalValue).toLocaleString()} value
+        </span>
+        {lowCount > 0 && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-400">
+            {lowCount} low stock
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Search name or SKU…"
@@ -136,11 +167,6 @@ export function StockTable({ products }: { products: ProductRow[] }) {
             onCheckedChange={(v) => setLowOnly(v === true)}
           />
           Low stock only
-          {lowCount > 0 && (
-            <Badge className="bg-amber-100 text-amber-800" variant="outline">
-              {lowCount}
-            </Badge>
-          )}
         </label>
         <div className="ml-auto flex gap-2">
           <StockImportDialog />
@@ -159,9 +185,6 @@ export function StockTable({ products }: { products: ProductRow[] }) {
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 border-b bg-card">
             <tr>
-              <th className="w-10 px-3 py-3 text-left text-xs font-medium text-muted-foreground">
-                #
-              </th>
               {(
                 [
                   ["name", "Product"],
@@ -172,7 +195,7 @@ export function StockTable({ products }: { products: ProductRow[] }) {
               ).map(([key, label]) => (
                 <th
                   key={key}
-                  className="px-3 py-3 text-left text-xs font-medium text-muted-foreground"
+                  className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
                 >
                   <button
                     className="flex items-center gap-1 hover:text-foreground"
@@ -183,19 +206,19 @@ export function StockTable({ products }: { products: ProductRow[] }) {
                   </button>
                 </th>
               ))}
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
                 Status
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
                 Adjust
               </th>
-              <th className="w-10 px-3 py-3" />
+              <th className="w-10 px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-0">
+                <td colSpan={7} className="p-0">
                   <EmptyState
                     icon={Package}
                     title={products.length === 0 ? "No products yet" : "No products match your filters"}
@@ -208,30 +231,29 @@ export function StockTable({ products }: { products: ProductRow[] }) {
                 </td>
               </tr>
             ) : (
-              filtered.map((p, i) => (
+              filtered.map((p) => (
                 <tr
                   key={p.id}
                   className="border-b last:border-0 transition-colors hover:bg-muted/40"
                 >
-                  <td className="px-3 py-3 text-xs text-muted-foreground">
-                    {i + 1}
-                  </td>
-                  <td className="px-3 py-3 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
+                  <td className="px-4 py-3.5 font-medium">
+                    <div className="flex items-center gap-3">
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass(p.id)}`}>
+                        <Package className="h-4 w-4" />
+                      </span>
                       {p.name}
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-muted-foreground">
+                  <td className="px-4 py-3.5 text-muted-foreground">
                     {p.sku ?? "—"}
                   </td>
-                  <td className="px-3 py-3 text-muted-foreground">
+                  <td className="px-4 py-3.5 text-muted-foreground">
                     ${p.unitPrice.toFixed(2)}
                   </td>
-                  <td className="px-3 py-3 font-medium tabular-nums">
+                  <td className="px-4 py-3.5 font-medium tabular-nums">
                     {p.quantity}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-3.5">
                     {isLow(p) ? (
                       <Badge
                         className="bg-amber-100 text-amber-800"
@@ -248,7 +270,7 @@ export function StockTable({ products }: { products: ProductRow[] }) {
                       </Badge>
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="outline"
@@ -278,7 +300,7 @@ export function StockTable({ products }: { products: ProductRow[] }) {
                       </Button>
                     </div>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-3.5">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7">
