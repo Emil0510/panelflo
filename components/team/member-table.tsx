@@ -50,6 +50,21 @@ function initials(name: string | null | undefined) {
   return name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
+const AVATAR_PALETTE = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300",
+];
+
+function avatarClass(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+
 function BotStatus({ connected }: { connected: boolean }) {
   return connected ? (
     <Check className="h-4 w-4 text-primary" />
@@ -127,7 +142,7 @@ function MemberSheet({
             {/* Header */}
             <div className="flex items-center gap-3 border-b p-5 pr-12">
               <Avatar className="h-12 w-12">
-                <AvatarFallback className="bg-primary-light text-base font-semibold text-primary">
+                <AvatarFallback className={`text-base font-semibold ${avatarClass(m.id)}`}>
                   {initials(m.name)}
                 </AvatarFallback>
               </Avatar>
@@ -242,9 +257,9 @@ export function MemberTable({
 
   return (
     <>
-      <div className="rounded-lg border bg-card">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow>
               <TableHead>Member</TableHead>
               <TableHead>Role</TableHead>
@@ -268,7 +283,7 @@ export function MemberTable({
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary-light text-xs text-primary">
+                        <AvatarFallback className={`text-xs font-semibold ${avatarClass(member.id)}`}>
                           {initials(member.name)}
                         </AvatarFallback>
                       </Avatar>

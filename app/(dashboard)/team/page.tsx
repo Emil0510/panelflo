@@ -22,12 +22,19 @@ export default async function TeamPage() {
     orderBy: { createdAt: "asc" },
   });
 
+  const adminCount = members.filter((m) => m.role === "ADMIN").length;
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {members.length} member{members.length === 1 ? "" : "s"} in your workspace
-        </p>
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            {members.length} member{members.length === 1 ? "" : "s"}
+          </span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            {adminCount} admin{adminCount === 1 ? "" : "s"}
+          </span>
+        </div>
         {isAdmin && <InviteMemberForm />}
       </div>
 
