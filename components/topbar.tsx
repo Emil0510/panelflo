@@ -18,6 +18,7 @@ const TITLES: Record<string, string> = {
   "/pipeline":      "Pipeline",
   "/tasks":         "Tasks",
   "/stock":         "Stock",
+  "/finance":       "Finance",
   "/team":          "Team",
   "/settings":      "Settings",
   "/billing":       "Billing",

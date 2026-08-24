@@ -17,7 +17,7 @@ export default async function NotificationsPage() {
   });
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="-m-4 flex h-[calc(100%+2rem)] flex-col md:-m-6 md:h-[calc(100%+3rem)]">
       <NotificationFeed notifications={notifications} />
     </div>
   );

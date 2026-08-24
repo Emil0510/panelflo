@@ -212,7 +212,6 @@ export function NotificationFeed({ notifications: initial }: { notifications: No
       {/* Page header */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card px-6 py-4">
         <div className="flex items-center gap-2">
-          <h1 className="text-base font-semibold text-foreground">Notifications</h1>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {items.length}
           </span>
