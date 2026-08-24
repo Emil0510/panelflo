@@ -141,7 +141,7 @@ export function StockTable({ products }: { products: ProductRow[] }) {
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          {products.length}
+          {products.length} product{products.length === 1 ? "" : "s"}
         </span>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           ${Math.round(totalValue).toLocaleString()} value

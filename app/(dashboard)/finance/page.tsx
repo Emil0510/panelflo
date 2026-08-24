@@ -54,7 +54,7 @@ export default async function FinancePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            {payments.length}
+            {payments.length} payment{payments.length === 1 ? "" : "s"}
           </span>
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
             ${totalCollected.toLocaleString()} collected

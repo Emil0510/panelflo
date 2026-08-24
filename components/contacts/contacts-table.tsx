@@ -127,7 +127,7 @@ export function ContactsTable({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            {contacts.length}
+            {contacts.length} contact{contacts.length === 1 ? "" : "s"}
           </span>
         </div>
         <div className="flex gap-2">
