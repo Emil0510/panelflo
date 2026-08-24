@@ -47,10 +47,20 @@ export default async function FinancePage() {
     }),
   ]);
 
+  const totalCollected = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Finance</h2>
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">Finance</h2>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            {payments.length}
+          </span>
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+            ${totalCollected.toLocaleString()} collected
+          </span>
+        </div>
         <PaymentFormSheet
           deals={deals}
           trigger={

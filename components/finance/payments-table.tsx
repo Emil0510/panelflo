@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, Wallet } from "lucide-react";
+import { Banknote, CreditCard, Landmark, Pencil, Trash2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -29,6 +29,20 @@ const METHOD_LABELS: Record<PaymentRow["method"], string> = {
   BANK_TRANSFER: "Bank Transfer",
   CARD: "Card",
   OTHER: "Other",
+};
+
+const METHOD_ICONS: Record<PaymentRow["method"], typeof Banknote> = {
+  CASH: Banknote,
+  BANK_TRANSFER: Landmark,
+  CARD: CreditCard,
+  OTHER: Wallet,
+};
+
+const METHOD_BADGE_CLASS: Record<PaymentRow["method"], string> = {
+  CASH: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400",
+  BANK_TRANSFER: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400",
+  CARD: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400",
+  OTHER: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/10 dark:text-slate-400",
 };
 
 export function PaymentsTable({
@@ -67,65 +81,80 @@ export function PaymentsTable({
   }
 
   return (
-    <div className="overflow-y-auto rounded-lg border bg-card">
+    <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card">
       <table className="w-full text-sm">
-        <thead className="border-b bg-card">
+        <thead className="sticky top-0 z-10 border-b bg-card">
           <tr>
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Deal</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Contact</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Amount</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Method</th>
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Deal</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Amount</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Method</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
             {showAssignee && (
-              <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Rep</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Rep</th>
             )}
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {payments.map((p) => (
-            <tr key={p.id} className="border-b last:border-0">
-              <td className="px-3 py-3 font-medium">{p.deal.title}</td>
-              <td className="px-3 py-3 text-muted-foreground">
-                {p.deal.contact ? `${p.deal.contact.firstName} ${p.deal.contact.lastName ?? ""}` : "—"}
-              </td>
-              <td className="px-3 py-3">${p.amount.toLocaleString()}</td>
-              <td className="px-3 py-3">
-                <Badge variant="outline">{METHOD_LABELS[p.method]}</Badge>
-              </td>
-              <td className="px-3 py-3 text-muted-foreground">
-                {p.paidAt.slice(0, 10)}
-              </td>
-              {showAssignee && (
-                <td className="px-3 py-3 text-muted-foreground">
-                  {p.deal.assignedTo?.name ?? "Unassigned"}
+          {payments.map((p) => {
+            const MethodIcon = METHOD_ICONS[p.method];
+            return (
+              <tr key={p.id} className="border-b last:border-0 transition-colors hover:bg-muted/40">
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${METHOD_BADGE_CLASS[p.method]}`}
+                    >
+                      <MethodIcon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium leading-tight">{p.deal.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {p.deal.contact ? `${p.deal.contact.firstName} ${p.deal.contact.lastName ?? ""}` : "No contact"}
+                      </p>
+                    </div>
+                  </div>
                 </td>
-              )}
-              <td className="px-3 py-3">
-                <div className="flex items-center gap-1">
-                  <PaymentFormSheet
-                    deals={deals}
-                    initial={{
-                      id: p.id,
-                      dealId: p.deal.id,
-                      amount: String(p.amount),
-                      method: p.method,
-                      paidAt: p.paidAt.slice(0, 10),
-                      notes: p.notes ?? "",
-                    }}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    }
-                  />
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => remove(p)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                <td className="px-4 py-3.5 font-semibold">${p.amount.toLocaleString()}</td>
+                <td className="px-4 py-3.5">
+                  <Badge variant="outline" className={METHOD_BADGE_CLASS[p.method]}>
+                    {METHOD_LABELS[p.method]}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3.5 text-muted-foreground">
+                  {p.paidAt.slice(0, 10)}
+                </td>
+                {showAssignee && (
+                  <td className="px-4 py-3.5 text-muted-foreground">
+                    {p.deal.assignedTo?.name ?? "Unassigned"}
+                  </td>
+                )}
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-1">
+                    <PaymentFormSheet
+                      deals={deals}
+                      initial={{
+                        id: p.id,
+                        dealId: p.deal.id,
+                        amount: String(p.amount),
+                        method: p.method,
+                        paidAt: p.paidAt.slice(0, 10),
+                        notes: p.notes ?? "",
+                      }}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => remove(p)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
