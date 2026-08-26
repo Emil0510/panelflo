@@ -49,6 +49,12 @@ export const PLANS = {
 
 export type PlanKey = keyof typeof PLANS;
 
+export const PLAN_LIMITS: Record<PlanKey, { contacts: number; members: number }> = {
+  starter: { contacts: 1000, members: 2 },
+  growth: { contacts: 10000, members: 10 },
+  pro: { contacts: Infinity, members: Infinity },
+};
+
 export function priceIdFor(planKey: PlanKey): string {
   return process.env[PLANS[planKey].priceIdEnv] ?? "";
 }
