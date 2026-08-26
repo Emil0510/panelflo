@@ -53,6 +53,7 @@ export const authOptions: NextAuthOptions = {
         });
         if (dbUser) {
           token.sub = dbUser.id;
+          token.name = dbUser.name;
           token.workspaceId = dbUser.workspaceId;
           token.role = dbUser.role;
           token.plan = dbUser.workspace.plan;
@@ -65,6 +66,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub as string;
+        session.user.name = (token.name as string | null) ?? null;
         session.user.workspaceId = token.workspaceId as string;
         session.user.role = token.role as "ADMIN" | "MEMBER";
         session.workspace = {

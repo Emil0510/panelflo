@@ -1,8 +1,11 @@
-import { Bot, Building2, Check, Minus, User } from "lucide-react";
+import { Bot, Building2, KeyRound, User } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { ConnectBotDialog } from "@/components/connect-bot-dialog";
+import { AccountForm } from "@/components/settings/account-form";
+import { BotConnections } from "@/components/settings/bot-connections";
+import { PasswordForm } from "@/components/settings/password-form";
+import { WorkspaceForm } from "@/components/settings/workspace-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +24,8 @@ export default async function SettingsPage() {
   ]);
   if (!workspace) redirect("/login");
 
-  const telegram = botSessions.find((s) => s.platform === "TELEGRAM");
+  const isAdmin = session.user.role === "ADMIN";
+  const telegram = botSessions.some((s) => s.platform === "TELEGRAM");
   const whatsapp = botSessions.find((s) => s.platform === "WHATSAPP");
 
   return (
@@ -33,28 +37,27 @@ export default async function SettingsPage() {
             Workspace
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">Name: </span>
-            {workspace.name}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Slug: </span>
-            {workspace.slug}
-          </p>
-          <p className="flex items-center gap-2">
-            <span className="text-muted-foreground">Plan: </span>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Plan:</span>
             <Badge className="bg-primary-light text-primary-dark" variant="outline">
               {workspace.plan}
             </Badge>
-          </p>
-          <p>
-            <span className="text-muted-foreground">Timezone: </span>
-            {workspace.timezone}
-          </p>
-          <Button asChild variant="outline" size="sm" className="mt-2">
-            <Link href="/billing">Manage billing</Link>
-          </Button>
+            <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
+              <Link href="/billing">Manage billing</Link>
+            </Button>
+          </div>
+          <WorkspaceForm
+            initialName={workspace.name}
+            initialTimezone={workspace.timezone}
+            slug={workspace.slug}
+            editable={isAdmin}
+          />
+          {!isAdmin && (
+            <p className="text-xs text-muted-foreground">
+              Only workspace admins can edit these settings.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -65,28 +68,8 @@ export default async function SettingsPage() {
             Bot connections
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              {telegram ? (
-                <Check className="h-4 w-4 text-primary" />
-              ) : (
-                <Minus className="h-4 w-4 text-slate-300" />
-              )}
-              Telegram {telegram ? "— connected" : "— not connected"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              {whatsapp ? (
-                <Check className="h-4 w-4 text-primary" />
-              ) : (
-                <Minus className="h-4 w-4 text-slate-300" />
-              )}
-              WhatsApp {whatsapp ? `— connected (${whatsapp.chatId})` : "— not connected"}
-            </span>
-          </div>
-          <ConnectBotDialog />
+        <CardContent>
+          <BotConnections telegram={telegram} whatsappChatId={whatsapp?.chatId ?? null} />
         </CardContent>
       </Card>
 
@@ -97,19 +80,28 @@ export default async function SettingsPage() {
             Account
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">Name: </span>
-            {session.user.name}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Email: </span>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Email:</span>
             {session.user.email}
-          </p>
-          <p className="flex items-center gap-2">
-            <span className="text-muted-foreground">Role: </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Role:</span>
             <Badge variant="outline">{session.user.role}</Badge>
-          </p>
+          </div>
+          <AccountForm initialName={session.user.name ?? ""} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-4 w-4 text-muted-foreground" />
+            Password
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PasswordForm />
         </CardContent>
       </Card>
     </div>
