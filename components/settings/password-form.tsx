@@ -43,33 +43,35 @@ export function PasswordForm() {
   const dirty = currentPassword.length > 0 && newPassword.length > 0 && confirmPassword.length > 0;
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label>Current password</Label>
-        <Input
-          type="password"
-          autoComplete="current-password"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>New password</Label>
-        <Input
-          type="password"
-          autoComplete="new-password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Confirm new password</Label>
-        <Input
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label>Current password</Label>
+          <Input
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>New password</Label>
+          <Input
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Confirm new password</Label>
+          <Input
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
       </div>
       <Button size="sm" onClick={save} disabled={!dirty || saving}>
         {saving ? "Saving…" : "Change password"}

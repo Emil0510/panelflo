@@ -1,4 +1,4 @@
-import { Bot, Building2, KeyRound, User } from "lucide-react";
+import { Bot, Building2, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -8,7 +8,7 @@ import { PasswordForm } from "@/components/settings/password-form";
 import { WorkspaceForm } from "@/components/settings/workspace-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -29,76 +29,72 @@ export default async function SettingsPage() {
   const whatsapp = botSessions.find((s) => s.platform === "WHATSAPP");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            Workspace
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Plan:</span>
-            <Badge className="bg-primary-light text-primary-dark" variant="outline">
-              {workspace.plan}
-            </Badge>
-            <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
-              <Link href="/billing">Manage billing</Link>
-            </Button>
-          </div>
-          <WorkspaceForm
-            initialName={workspace.name}
-            initialTimezone={workspace.timezone}
-            slug={workspace.slug}
-            editable={isAdmin}
+        <CardContent className="pt-6">
+          <AccountForm
+            userId={session.user.id}
+            initialName={session.user.name ?? ""}
+            email={session.user.email ?? ""}
+            role={session.user.role}
           />
-          {!isAdmin && (
-            <p className="text-xs text-muted-foreground">
-              Only workspace admins can edit these settings.
-            </p>
-          )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Bot className="h-4 w-4 text-muted-foreground" />
-            Bot connections
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BotConnections telegram={telegram} whatsappChatId={whatsapp?.chatId ?? null} />
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              Workspace
+            </CardTitle>
+            <CardDescription>
+              <span className="flex items-center gap-2">
+                <Badge className="bg-primary-light text-primary-dark" variant="outline">
+                  {workspace.plan}
+                </Badge>
+                <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
+                  <Link href="/billing">Manage billing</Link>
+                </Button>
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <WorkspaceForm
+              initialName={workspace.name}
+              initialTimezone={workspace.timezone}
+              slug={workspace.slug}
+              editable={isAdmin}
+            />
+            {!isAdmin && (
+              <p className="text-xs text-muted-foreground">
+                Only workspace admins can edit these settings.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <User className="h-4 w-4 text-muted-foreground" />
-            Account
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Email:</span>
-            {session.user.email}
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Role:</span>
-            <Badge variant="outline">{session.user.role}</Badge>
-          </div>
-          <AccountForm initialName={session.user.name ?? ""} />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bot className="h-4 w-4 text-muted-foreground" />
+              Bot connections
+            </CardTitle>
+            <CardDescription>Link Telegram or WhatsApp to log activity via chat.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BotConnections telegram={telegram} whatsappChatId={whatsapp?.chatId ?? null} />
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <KeyRound className="h-4 w-4 text-muted-foreground" />
-            Password
+            Security
           </CardTitle>
+          <CardDescription>Change the password used to sign in.</CardDescription>
         </CardHeader>
         <CardContent>
           <PasswordForm />
