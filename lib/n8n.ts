@@ -1,6 +1,11 @@
 /**
- * Fire-and-forget triggers to n8n webhook workflows. Failures are logged,
- * never block the API response.
+ * Fire-and-forget triggers to the Panelflo bot service (Modal-hosted Python
+ * app — see ../bot-service). Failures are logged, never block the API
+ * response.
+ *
+ * Was previously n8n (N8N_WEBHOOK_URL); replaced 2026-09-08. Only
+ * "bot-message" is actually consumed today — the bot service exposes a
+ * single POST /webhook/bot-message route.
  */
 
 type N8nEvent =
@@ -16,9 +21,10 @@ type N8nEvent =
     };
 
 export async function triggerN8n(event: N8nEvent): Promise<void> {
-  const base = process.env.N8N_WEBHOOK_URL;
-  if (!base || base.includes("your-n8n")) {
-    console.warn(`[n8n] N8N_WEBHOOK_URL not configured — skipped ${event.event}`);
+  const base = process.env.BOT_SERVICE_URL;
+  const key = process.env.BOT_SERVICE_KEY;
+  if (!base || !key) {
+    console.warn(`[bot-service] BOT_SERVICE_URL/BOT_SERVICE_KEY not configured — skipped ${event.event}`);
     return;
   }
 
@@ -28,11 +34,11 @@ export async function triggerN8n(event: N8nEvent): Promise<void> {
   try {
     await fetch(`${base}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-api-key": key },
       body: JSON.stringify(event),
       signal: AbortSignal.timeout(5000),
     });
   } catch (err) {
-    console.error(`[n8n] trigger ${event.event} failed:`, err);
+    console.error(`[bot-service] trigger ${event.event} failed:`, err);
   }
 }
