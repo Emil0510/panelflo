@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Bot, InlineKeyboard } from "grammy";
+import { Bot, Context, InlineKeyboard } from "grammy";
 
 import { db } from "@/lib/db";
 import { triggerN8n } from "@/lib/n8n";
@@ -227,7 +227,9 @@ export function getTelegramBot(): Bot {
     );
   });
 
-  // Everything else → n8n intent detection.
+  const MAX_VOICE_SECONDS = 120;
+
+  // Everything else → the bot service (Gemini agent).
   bot.on("message:text", async (ctx) => {
     const chatId = String(ctx.chat.id);
     const user = await linkedUser(chatId);
@@ -250,6 +252,75 @@ export function getTelegramBot(): Bot {
       workspaceId: user.workspaceId,
     });
   });
+
+  // Voice notes and uploaded audio → download and hand the bytes to the
+  // bot service, which transcribes and acts on them in one Gemini call.
+  async function handleAudio(
+    ctx: Context,
+    chatId: string,
+    fileId: string,
+    duration: number,
+    mimeType: string
+  ) {
+    const user = await linkedUser(chatId);
+    if (!user) {
+      await ctx.reply("I don't know you yet 🙂 Send /connect [code] from your Panelflo dashboard.");
+      return;
+    }
+    if (duration > MAX_VOICE_SECONDS) {
+      await ctx.reply("That voice message is a bit long — keep it under 2 minutes?");
+      return;
+    }
+
+    try {
+      const file = await ctx.api.getFile(fileId);
+      if (!file.file_path) throw new Error("no file_path from Telegram");
+      const res = await fetch(
+        `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`
+      );
+      if (!res.ok) throw new Error(`file download ${res.status}`);
+      const audioBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+
+      await db.botSession.updateMany({
+        where: { userId: user.id, platform: "TELEGRAM" },
+        data: { lastActivity: new Date() },
+      });
+
+      await triggerN8n({
+        event: "bot-message",
+        userId: user.id,
+        platform: "telegram",
+        chatId,
+        message: "",
+        audioBase64,
+        audioMimeType: mimeType,
+        workspaceId: user.workspaceId,
+      });
+    } catch (err) {
+      console.error("[telegram] voice handling failed:", err);
+      await ctx.reply("Couldn't process that voice message — try again, or send it as text?");
+    }
+  }
+
+  bot.on("message:voice", (ctx) =>
+    handleAudio(
+      ctx,
+      String(ctx.chat.id),
+      ctx.message.voice.file_id,
+      ctx.message.voice.duration,
+      ctx.message.voice.mime_type ?? "audio/ogg"
+    )
+  );
+
+  bot.on("message:audio", (ctx) =>
+    handleAudio(
+      ctx,
+      String(ctx.chat.id),
+      ctx.message.audio.file_id,
+      ctx.message.audio.duration,
+      ctx.message.audio.mime_type ?? "audio/mpeg"
+    )
+  );
 
   botInstance = bot;
   return bot;

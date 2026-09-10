@@ -18,6 +18,9 @@ type N8nEvent =
       chatId: string;
       message: string;
       workspaceId: string;
+      /** Base64 audio for a voice message — the bot service transcribes and acts on it. */
+      audioBase64?: string;
+      audioMimeType?: string;
     };
 
 export async function triggerN8n(event: N8nEvent): Promise<void> {
